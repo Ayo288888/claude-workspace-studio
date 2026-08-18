@@ -40,16 +40,26 @@ def apply_claude_styles():
             display: none !important;
         }
 
-        /* Sidebar Styling */
+        /* Sidebar Styling - Polished Claude Layout */
         section[data-testid="stSidebar"] {
             background-color: var(--claude-sidebar) !important;
             border-right: 1px solid var(--claude-border) !important;
-            padding-top: 1.5rem !important;
+            padding: 1.5rem 1rem !important;
         }
 
         section[data-testid="stSidebar"] hr {
             border-color: var(--claude-border) !important;
-            margin: 1rem 0 !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        .sidebar-section-title {
+            font-size: 0.76rem;
+            font-weight: 700;
+            color: var(--claude-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            margin-bottom: 0.5rem;
+            margin-top: 0.4rem;
         }
 
         /* Form Inputs & Selectboxes Everywhere */
@@ -105,17 +115,14 @@ def apply_claude_styles():
             border: 1px solid #BBF7D0;
             border-radius: 12px;
             padding: 12px 14px;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
         }
 
         .security-badge-header {
-            display: flex;
-            align-items: center;
-            gap: 6px;
             font-size: 0.82rem;
             font-weight: 700;
             color: #166534;
-            margin-bottom: 4px;
+            margin-bottom: 3px;
         }
 
         .security-badge-sub {
@@ -128,7 +135,6 @@ def apply_claude_styles():
         .cost-token-badge {
             display: inline-flex;
             align-items: center;
-            gap: 6px;
             background-color: var(--claude-sidebar);
             border: 1px solid var(--claude-border);
             padding: 3px 10px;
@@ -179,17 +185,9 @@ def apply_claude_styles():
             padding: 0 1rem;
         }
 
-        .claude-sunburst {
-            font-size: 2.5rem;
-            line-height: 1;
-            margin-bottom: 0.75rem;
-            display: inline-block;
-            filter: drop-shadow(0 2px 8px rgba(218, 119, 86, 0.2));
-        }
-
         .claude-title {
             font-family: 'Instrument Serif', Georgia, serif;
-            font-size: 3rem;
+            font-size: 3.25rem;
             font-weight: 400;
             color: var(--claude-text);
             line-height: 1.1;
@@ -203,7 +201,7 @@ def apply_claude_styles():
             font-weight: 400;
         }
 
-        /* Streamlit Bottom Chat Input */
+        /* Chat Input Container Integration */
         div[data-testid="stChatInput"] {
             background-color: transparent !important;
         }
@@ -228,6 +226,37 @@ def apply_claude_styles():
 
         div[data-testid="stChatInput"] button {
             color: var(--claude-coral) !important;
+        }
+
+        /* Inline Chat Attachment Popover / Button */
+        div[data-testid="stPopover"] > button {
+            border-radius: 12px !important;
+            border: 1px solid var(--claude-border) !important;
+            background-color: var(--claude-card) !important;
+            color: var(--claude-muted) !important;
+            font-weight: 600 !important;
+            padding: 0.45rem 0.75rem !important;
+            box-shadow: var(--claude-shadow) !important;
+        }
+
+        div[data-testid="stPopover"] > button:hover {
+            border-color: var(--claude-coral) !important;
+            color: var(--claude-coral) !important;
+        }
+
+        /* File Attachment Chips */
+        .attachment-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background-color: var(--claude-card);
+            border: 1px solid var(--claude-border);
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-size: 0.8rem;
+            color: var(--claude-text);
+            margin: 4px 4px 8px 0;
+            box-shadow: var(--claude-shadow);
         }
 
         /* Chat Message Cards */
@@ -296,9 +325,6 @@ def apply_claude_styles():
             font-weight: 700;
             font-size: 1rem;
             color: #991B1B;
-            display: flex;
-            align-items: center;
-            gap: 8px;
         }
 
         .claude-error-code {

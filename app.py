@@ -60,8 +60,6 @@ if "current_session_id" not in st.session_state:
     st.session_state.current_session_id = None
 if "active_starter_prompt" not in st.session_state:
     st.session_state.active_starter_prompt = ""
-if "attached_files" not in st.session_state:
-    st.session_state.attached_files = []
 
 # Ensure active session exists
 sessions = db.get_sessions()
@@ -119,18 +117,18 @@ for k, v in CLAUDE_MODELS.items():
 model_choices["Custom Model ID..."] = "custom"
 
 # ==========================================
-# SIDEBAR
+# SIDEBAR - POLISHED CLAUDE.AI LAYOUT
 # ==========================================
 with st.sidebar:
-    # Claude Header Branding (Clean typography, no emoji)
+    # Header Branding
     st.markdown("""
-    <div style="margin-bottom: 16px; padding: 2px 0;">
-        <div style="font-weight: 700; font-size: 1.25rem; color: #2C2825; line-height: 1.1; letter-spacing: -0.01em;">Claude</div>
-        <div style="font-size: 0.75rem; color: #736E65;">Workspace Studio</div>
+    <div style="margin-bottom: 18px; padding-bottom: 6px;">
+        <div style="font-weight: 700; font-size: 1.3rem; color: #2C2825; line-height: 1.1; letter-spacing: -0.02em;">Claude</div>
+        <div style="font-size: 0.76rem; color: #736E65; margin-top: 2px;">Workspace Studio</div>
     </div>
     """, unsafe_allow_html=True)
 
-    # Start New Chat Button (No emoji)
+    # Primary Action: Start New Chat
     if st.button("Start new chat", use_container_width=True, type="primary"):
         new_id = db.create_session(
             title="New Chat",
@@ -139,23 +137,22 @@ with st.sidebar:
         )
         st.session_state.current_session_id = new_id
         st.session_state.active_starter_prompt = ""
-        st.session_state.attached_files = []
         st.rerun()
 
-    st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
 
-    # Model & Reasoning Selection inside Sidebar
-    st.markdown("<div style='font-size: 0.78rem; font-weight: 700; color: #736E65; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;'>Model & Effort</div>", unsafe_allow_html=True)
+    # Section 1: Model & Reasoning Configuration
+    st.markdown("<div class='sidebar-section-title'>Model & Reasoning</div>", unsafe_allow_html=True)
     
     selected_model_label = st.selectbox(
-        "Choose Model",
+        "Model",
         options=list(model_choices.keys()),
         index=0,
         label_visibility="collapsed"
     )
     
     if selected_model_label == "Custom Model ID...":
-        custom_id_input = st.text_input("Enter Model ID", placeholder="e.g. claude-opus-4-6", help="Type exact model identifier from your Claude console.")
+        custom_id_input = st.text_input("Model ID", placeholder="e.g. claude-opus-4-6", help="Type exact model identifier from your Claude console.")
         selected_model_id = custom_id_input.strip() if custom_id_input else "claude-3-7-sonnet-20250219"
         selected_model_name = f"Custom ({selected_model_id})"
     else:
@@ -165,7 +162,7 @@ with st.sidebar:
     model_meta = MODEL_DETAILS.get(selected_model_name, {})
 
     selected_effort = st.select_slider(
-        "Reasoning Effort",
+        "Effort",
         options=list(EFFORT_LEVELS.keys()),
         value="Medium",
         help="Low: Fast & light • Medium: Balanced • High: Deep chain-of-thought"
@@ -174,18 +171,18 @@ with st.sidebar:
     badge = model_meta.get("badge")
     badge_html = f"<span class='new-pill'>{badge}</span>" if badge else ""
     st.markdown(f"""
-    <div style="font-size: 0.76rem; color: #736E65; margin-top: -6px; margin-bottom: 12px; line-height: 1.35;">
+    <div style="font-size: 0.75rem; color: #736E65; margin-top: -6px; margin-bottom: 14px; line-height: 1.4;">
         {badge_html} <em>{model_meta.get('tagline', 'Direct Anthropic Engine')}</em><br/>
-        <span style="color: #A09A8F;">Target ID: <code>{selected_model_id}</code></span>
+        <span style="color: #A09A8F;">Target: <code>{selected_model_id}</code></span>
     </div>
     """, unsafe_allow_html=True)
 
     st.divider()
 
-    # System Preset Selector
-    st.markdown("<div style='font-size: 0.78rem; font-weight: 700; color: #736E65; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;'>System Preset</div>", unsafe_allow_html=True)
+    # Section 2: Persona & System Preset
+    st.markdown("<div class='sidebar-section-title'>System Preset</div>", unsafe_allow_html=True)
     selected_preset = st.selectbox(
-        "System Preset",
+        "Preset",
         options=list(SYSTEM_PRESETS.keys()),
         index=0,
         label_visibility="collapsed"
@@ -202,12 +199,12 @@ with st.sidebar:
 
     st.divider()
 
-    # Conversation History List (No emoji)
-    st.markdown("<div style='font-size: 0.78rem; font-weight: 700; color: #736E65; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px;'>Recent Chats</div>", unsafe_allow_html=True)
+    # Section 3: Recent Chats List
+    st.markdown("<div class='sidebar-section-title'>Recent Chats</div>", unsafe_allow_html=True)
     
-    for s in sessions[:20]:
+    for s in sessions[:15]:
         is_active = s["id"] == st.session_state.current_session_id
-        col_btn, col_del = st.columns([0.82, 0.18])
+        col_btn, col_del = st.columns([0.84, 0.16])
         with col_btn:
             title_text = s['title'][:22] + "..." if len(s['title']) > 22 else s['title']
             if st.button(
@@ -218,10 +215,9 @@ with st.sidebar:
             ):
                 st.session_state.current_session_id = s["id"]
                 st.session_state.active_starter_prompt = ""
-                st.session_state.attached_files = []
                 st.rerun()
         with col_del:
-            if st.button("Delete", key=f"del_{s['id']}", help="Delete chat"):
+            if st.button("x", key=f"del_{s['id']}", help="Delete chat"):
                 db.delete_session(s["id"])
                 remaining = db.get_sessions()
                 st.session_state.current_session_id = remaining[0]["id"] if remaining else None
@@ -229,8 +225,8 @@ with st.sidebar:
 
     st.divider()
 
-    # Bulletproof Encrypted BYOK Authentication (No emoji)
-    st.markdown("<div style='font-size: 0.78rem; font-weight: 700; color: #736E65; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px;'>Authentication & Security</div>", unsafe_allow_html=True)
+    # Section 4: In-Memory Encrypted Authentication
+    st.markdown("<div class='sidebar-section-title'>Authentication & Security</div>", unsafe_allow_html=True)
     
     if current_key:
         masked_fingerprint = mask_api_key(current_key)
@@ -246,14 +242,14 @@ with st.sidebar:
         </div>
         """, unsafe_allow_html=True)
         
-        if st.button("Disconnect & Purge Key", use_container_width=True, type="secondary"):
+        if st.button("Disconnect Key", use_container_width=True, type="secondary"):
             st.session_state.encrypted_api_key = ""
             st.session_state.live_models_cache = []
             st.rerun()
     else:
         st.markdown("""
         <div style="font-size: 0.78rem; color: #736E65; margin-bottom: 8px;">
-            Paste your Anthropic API Key. It is encrypted in volatile memory and never saved to disk.
+            Paste your Anthropic API Key. It is held encrypted in volatile memory only.
         </div>
         """, unsafe_allow_html=True)
         
@@ -294,7 +290,7 @@ else:
 
 # Top Minimal Status Header
 st.markdown(f"""
-<div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.88rem; color: #736E65; padding: 6px 0; border-bottom: 1px solid #E5E0D8; margin-bottom: 12px;">
+<div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.88rem; color: #736E65; padding: 4px 0 10px 0; border-bottom: 1px solid #E5E0D8; margin-bottom: 16px;">
     <div>
         <span style="font-weight: 600; color: #2C2825;">{selected_model_name}</span>
         <span> • </span>
@@ -314,7 +310,7 @@ if not has_messages:
     </div>
     """, unsafe_allow_html=True)
 
-    # 4 Quick Starter Prompt Cards (No emoji)
+    # 4 Quick Starter Prompt Cards
     card_col1, card_col2 = st.columns(2)
     with card_col1:
         if st.button("Write, Edit & Summarize\nDraft content, polish text, or synthesize documents", key="card_write", use_container_width=True):
@@ -363,26 +359,30 @@ prefill_prompt = st.session_state.active_starter_prompt
 if prefill_prompt and not has_messages:
     st.info(f"Starter Prompt Selected: *{prefill_prompt}* (Type your topic below to send)")
 
-# Integrated Attachment Section directly in the chatbox area
-with st.expander("Attach Files to Prompt", expanded=False):
-    uploaded_files = st.file_uploader(
-        "Attach Files",
-        accept_multiple_files=True,
-        type=["txt", "md", "py", "js", "ts", "json", "csv", "pdf", "docx"],
-        label_visibility="collapsed",
-        key="chatbox_file_uploader"
-    )
+# Integrated chatbox attachment row
+col_attach_btn, col_attach_status = st.columns([0.18, 0.82])
+with col_attach_btn:
+    with st.popover("+ Attach", help="Attach code, markdown, documents or images to prompt"):
+        uploaded_files = st.file_uploader(
+            "Upload files",
+            accept_multiple_files=True,
+            type=["txt", "md", "py", "js", "ts", "json", "csv", "pdf", "docx"],
+            label_visibility="collapsed",
+            key="inline_chat_uploader"
+        )
 
 file_context_str = ""
-if uploaded_files:
-    processed_files = []
-    for f in uploaded_files:
-        p = process_raw_file(f.name, f.read())
-        if p:
-            processed_files.append(p)
-    if processed_files:
-        file_context_str = "\n\n" + format_file_for_prompt(processed_files)
-        st.caption(f"Attached: {len(processed_files)} file(s) ({', '.join([f.name for f in uploaded_files])})")
+with col_attach_status:
+    if uploaded_files:
+        processed_files = []
+        for f in uploaded_files:
+            p = process_raw_file(f.name, f.read())
+            if p:
+                processed_files.append(p)
+        if processed_files:
+            file_context_str = "\n\n" + format_file_for_prompt(processed_files)
+            file_names = ", ".join([f.name for f in uploaded_files])
+            st.markdown(f"<span class='attachment-chip'>Attached: {file_names}</span>", unsafe_allow_html=True)
 
 prompt_input = st.chat_input("Reply to Claude...")
 

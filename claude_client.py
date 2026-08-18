@@ -293,8 +293,11 @@ class ClaudeEngine:
         for m in messages:
             role = m.get("role")
             content = m.get("content", "")
-            if role in ["user", "assistant"] and content and str(content).strip():
-                clean_messages.append({"role": role, "content": str(content).strip()})
+            if role in ["user", "assistant"]:
+                if isinstance(content, list) and content:
+                    clean_messages.append({"role": role, "content": content})
+                elif content and str(content).strip():
+                    clean_messages.append({"role": role, "content": str(content).strip()})
 
         if not clean_messages:
             raise ClaudeModelError(

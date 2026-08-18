@@ -19,6 +19,7 @@ from claude_client import (
     format_cost_badge
 )
 from file_processor import process_raw_file, format_file_for_prompt
+from web_tools import get_web_context_for_prompt
 from styles import apply_claude_styles
 from security import SessionKeyManager, mask_api_key, validate_anthropic_key
 
@@ -29,7 +30,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Apply Claude CSS styling
+# Apply Claude Dark CSS styling
 apply_claude_styles()
 
 # Initialize In-Memory Session Key Manager & Database
@@ -64,6 +65,8 @@ if "selected_model_name" not in st.session_state:
     st.session_state.selected_model_name = "Claude 3.7 Sonnet (Reasoning)"
 if "selected_effort" not in st.session_state:
     st.session_state.selected_effort = "Medium"
+if "web_search_active" not in st.session_state:
+    st.session_state.web_search_active = True
 
 # Ensure active session exists
 sessions = db.get_sessions()
@@ -129,7 +132,7 @@ total_session_tokens = sum(m.get("input_tokens", 0) + m.get("output_tokens", m.g
 total_session_cost = sum(m.get("cost", 0.0) for m in messages)
 
 # ==========================================
-# SIDEBAR - CLAUDE INTERFACE & FLOW
+# SIDEBAR - CLAUDE INTERFACE
 # ==========================================
 with st.sidebar:
     # Top Branding
@@ -144,7 +147,7 @@ with st.sidebar:
     if st.button("+ New", use_container_width=True, type="primary"):
         new_id = db.create_session(
             title="New Chat",
-            model="Claude 3.7 Sonnet (Reasoning)",
+            model=st.session_state.selected_model_name,
             system_prompt=SYSTEM_PRESETS["General Assistant"]
         )
         st.session_state.current_session_id = new_id
@@ -170,6 +173,16 @@ with st.sidebar:
         system_prompt = custom_system_input.strip() if custom_system_input else ""
     else:
         system_prompt = SYSTEM_PRESETS[selected_preset]
+
+    st.divider()
+
+    # Web Browsing & Search Toggle
+    st.markdown("<div class='sidebar-section-title'>Live Web & Search</div>", unsafe_allow_html=True)
+    st.session_state.web_search_active = st.toggle(
+        "Enable Web Search & URL Reader",
+        value=st.session_state.web_search_active,
+        help="Allows Claude to search the web in real-time and read URLs passed in prompts."
+    )
 
     st.divider()
 
@@ -290,6 +303,7 @@ if has_messages:
             <span>Effort: <strong>{st.session_state.selected_effort}</strong></span>
             <span> • </span>
             <span>{selected_preset}</span>
+            {"<span> • 🌐 Web Access Active</span>" if st.session_state.web_search_active else ""}
         </div>
         <div style="font-size: 0.78rem; font-family: monospace;">
             Total: {total_session_tokens:,} tokens (${total_session_cost:.4f})
@@ -334,49 +348,60 @@ for msg in messages:
                 st.markdown(f"<div class='cost-token-badge'>{cost_badge_str}</div>", unsafe_allow_html=True)
 
 # =========================================================================
-# UNIFIED CLAUDE CHATBOX (With In-Box Model Selector, Attach & Effort)
+# UNIFIED INLINE CHAT CONTROLS (Toolbar situated with the chatbox)
 # =========================================================================
 
-# Top controls inside chatbox toolbar
-col_ctrl_left, col_ctrl_model, col_ctrl_effort = st.columns([0.22, 0.50, 0.28])
+# Short model name for compact button display
+curr_model = st.session_state.selected_model_name
+short_model = curr_model.split("(")[0].strip()
 
-with col_ctrl_left:
+# Clean inline toolbar bar matching media_1787095695464.png
+col_attach, col_model_pop, col_web_status = st.columns([0.14, 0.46, 0.40])
+
+with col_attach:
     with st.popover("+ Attach", help="Attach code, markdown, documents or data"):
         uploaded_files = st.file_uploader(
             "Upload files",
             accept_multiple_files=True,
-            type=["txt", "md", "py", "js", "ts", "json", "csv", "pdf", "docx"],
+            type=["txt", "md", "py", "js", "ts", "json", "csv", "pdf", "docx", "png", "jpg", "jpeg"],
             label_visibility="collapsed",
             key="chatbox_file_uploader"
         )
 
-with col_ctrl_model:
-    selected_model_label = st.selectbox(
-        "Choose Model",
-        options=list(model_choices.keys()),
-        index=0,
-        label_visibility="collapsed"
-    )
-    if selected_model_label == "Custom Model ID...":
-        custom_id_input = st.text_input("Enter ID", placeholder="e.g. claude-opus-4-6", label_visibility="collapsed")
-        selected_model_id = custom_id_input.strip() if custom_id_input else "claude-3-7-sonnet-20250219"
-        selected_model_name = f"Custom ({selected_model_id})"
-    else:
-        selected_model_id = model_choices[selected_model_label]
-        selected_model_name = selected_model_label
-    st.session_state.selected_model_name = selected_model_name
+with col_model_pop:
+    with st.popover(f"{short_model}  {st.session_state.selected_effort} ⌃", help="Switch Model & Reasoning Effort"):
+        st.markdown("<div style='font-size: 0.8rem; font-weight: 700; color: #8E8A80; text-transform: uppercase;'>Model Selection</div>", unsafe_allow_html=True)
+        selected_model_label = st.selectbox(
+            "Model",
+            options=list(model_choices.keys()),
+            index=0,
+            label_visibility="collapsed",
+            key="popover_model_select"
+        )
+        if selected_model_label == "Custom Model ID...":
+            custom_id_input = st.text_input("Model ID", placeholder="e.g. claude-opus-4-6", key="popover_custom_id")
+            selected_model_id = custom_id_input.strip() if custom_id_input else "claude-3-7-sonnet-20250219"
+            selected_model_name = f"Custom ({selected_model_id})"
+        else:
+            selected_model_id = model_choices[selected_model_label]
+            selected_model_name = selected_model_label
+        st.session_state.selected_model_name = selected_model_name
 
-with col_ctrl_effort:
-    selected_effort = st.selectbox(
-        "Effort",
-        options=["Low Effort", "Medium Effort", "High Effort"],
-        index=1,
-        label_visibility="collapsed"
-    )
-    effort_clean = selected_effort.replace(" Effort", "")
-    st.session_state.selected_effort = effort_clean
+        st.markdown("<div style='font-size: 0.8rem; font-weight: 700; color: #8E8A80; text-transform: uppercase; margin-top: 10px;'>Reasoning Effort</div>", unsafe_allow_html=True)
+        selected_effort = st.select_slider(
+            "Effort",
+            options=list(EFFORT_LEVELS.keys()),
+            value=st.session_state.selected_effort if st.session_state.selected_effort in EFFORT_LEVELS else "Medium",
+            label_visibility="collapsed",
+            key="popover_effort_slider"
+        )
+        st.session_state.selected_effort = selected_effort
 
-# Process Uploaded Files Context
+with col_web_status:
+    web_label = "🌐 Web Access Active" if st.session_state.web_search_active else "🔒 Offline Mode"
+    st.markdown(f"<div style='font-size: 0.78rem; color: #8E8A80; text-align: right; padding-top: 8px;'>{web_label}</div>", unsafe_allow_html=True)
+
+# Process Uploaded Files Context safely
 file_context_str = ""
 if uploaded_files:
     processed_files = []
@@ -415,9 +440,9 @@ if not has_messages:
             st.rerun()
 
 if prefill_prompt and not has_messages:
-    st.info(f"Starter Prompt: *{prefill_prompt}* (Type your details below to send)")
+    st.info(f"Starter Prompt: *{prefill_prompt}* (Type your topic below to send)")
 
-# The Main Chat Input Field
+# The Main Chat Input Field (Bulletproof Submission)
 prompt_placeholder = "How can I help you today?" if not has_messages else "Reply to Claude..."
 prompt_input = st.chat_input(prompt_placeholder)
 
@@ -432,8 +457,14 @@ if prompt_input:
     if not current_key:
         st.error("Please enter your Anthropic API Key in the sidebar before sending a message.")
         st.stop()
+
+    # Retrieve live web context if enabled or URLs present
+    web_context_str, web_sources = "", []
+    if st.session_state.web_search_active:
+        with st.spinner("Checking live web & sources..."):
+            web_context_str, web_sources = get_web_context_for_prompt(actual_query, web_search_enabled=True)
         
-    full_prompt = actual_query + file_context_str
+    full_prompt = actual_query + file_context_str + web_context_str
     
     # Save user message to database
     db.save_message(st.session_state.current_session_id, "user", full_prompt)
@@ -442,6 +473,8 @@ if prompt_input:
         st.markdown(actual_query)
         if file_context_str and uploaded_files:
             st.caption(f"Attached {len(uploaded_files)} file(s)")
+        if web_sources:
+            st.caption(f"Web Sources Referenced: {', '.join(web_sources[:2])}")
 
     # Prepare chat history for API
     history_messages = []
@@ -459,16 +492,20 @@ if prompt_input:
         full_thinking = ""
         final_usage = {"input_tokens": 0, "output_tokens": 0, "cost": 0.0}
         
+        target_model_name = st.session_state.selected_model_name
+        target_model_id = model_choices.get(target_model_name, CLAUDE_MODELS.get(target_model_name, "claude-3-7-sonnet-20250219"))
+        target_effort = st.session_state.selected_effort
+        
         try:
             engine = ClaudeEngine(api_key=current_key)
             
-            with st.spinner(f"Generating with {selected_model_name}..."):
+            with st.spinner(f"Generating with {target_model_name}..."):
                 stream = engine.stream_chat(
-                    model_name=selected_model_name,
-                    model_id=selected_model_id,
+                    model_name=target_model_name,
+                    model_id=target_model_id,
                     messages=history_messages,
                     system=system_prompt,
-                    effort_level=effort_clean,
+                    effort_level=target_effort,
                     max_tokens=8192
                 )
                 
@@ -538,7 +575,7 @@ if prompt_input:
                     <div class="claude-error-code">500 ERROR</div>
                 </div>
                 <div class="claude-error-body">
-                    <strong>Model:</strong> {selected_model_name} (<code>{selected_model_id}</code>)<br/>
+                    <strong>Model:</strong> {target_model_name} (<code>{target_model_id}</code>)<br/>
                     <strong>Reason:</strong> {str(ex)}
                 </div>
             </div>

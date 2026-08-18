@@ -5,10 +5,10 @@ from dotenv import load_dotenv
 # Load local environment variables if present
 load_dotenv()
 
-from claude_workspace.storage import Database
-from claude_workspace.claude_client import ClaudeEngine, CLAUDE_MODELS, SYSTEM_PRESETS, extract_artifacts
-from claude_workspace.file_processor import process_raw_file, format_file_for_prompt
-from claude_workspace.styles import apply_claude_styles
+from storage import Database
+from claude_client import ClaudeEngine, CLAUDE_MODELS, SYSTEM_PRESETS, extract_artifacts
+from file_processor import process_raw_file, format_file_for_prompt
+from styles import apply_claude_styles
 
 # Page configuration
 st.set_page_config(
@@ -24,7 +24,7 @@ apply_claude_styles()
 # Initialize SQLite storage
 @st.cache_resource
 def get_db():
-    return Database("claude_workspace/claude_chat.db")
+    return Database("claude_chat.db")
 
 db = get_db()
 
@@ -32,7 +32,10 @@ db = get_db()
 if "current_session_id" not in st.session_state:
     st.session_state.current_session_id = None
 if "api_key" not in st.session_state:
-    st.session_state.api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if not key and hasattr(st, "secrets") and "ANTHROPIC_API_KEY" in st.secrets:
+        key = st.secrets["ANTHROPIC_API_KEY"]
+    st.session_state.api_key = key
 if "uploaded_files_data" not in st.session_state:
     st.session_state.uploaded_files_data = []
 

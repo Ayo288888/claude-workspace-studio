@@ -13,7 +13,7 @@ A high-fidelity Streamlit application that provides the authentic **Claude Web U
   - `Claude 3.5 Sonnet` (Fast & high intelligence)
   - `Claude 3.5 Haiku` (Lightning fast & ultra low cost)
   - `Claude 3 Opus` (Deep writing & synthesis)
-- **Persistent SQLite Conversation History**: Chat sessions are saved in `claude_workspace/claude_chat.db` with auto-titling, past session switching, and deletion.
+- **Persistent SQLite Conversation History**: Chat sessions are saved in `claude_chat.db` with auto-titling, past session switching, and deletion.
 - **Multimodal File Attachments**: Upload Python files, TypeScript/JSON code, Markdown documents, PDFs (with `pdfplumber`), DOCX files, and images for Claude to review, refactor, or summarize.
 - **Artifacts Side Drawer**: Automatically identifies code blocks, architecture plans, and markdown files in Claude's output and renders them with 1-click copy & download.
 - **Role Presets**: Pre-configured system personas for *Architecture & Implementation Planner*, *Senior Code & Security Reviewer*, *Document & Policy Analyst*, and *General Assistant*.
@@ -23,11 +23,11 @@ A high-fidelity Streamlit application that provides the authentic **Claude Web U
 ## 🚀 How to Run
 
 ### Option 1: 1-Click Batch Runner (Windows)
-Double-click `run_claude.bat` in the project root directory.
+Double-click `run_app.bat` in the project root directory.
 
 ### Option 2: Terminal Command
 ```bash
-.venv\Scripts\streamlit run claude_workspace/app.py
+streamlit run app.py
 ```
 Open your browser at **`http://localhost:8501`**.
 

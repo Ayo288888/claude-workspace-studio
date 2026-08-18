@@ -5,9 +5,11 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 class Database:
-    def __init__(self, db_path: str = "claude_workspace/claude_chat.db"):
+    def __init__(self, db_path: str = "claude_chat.db"):
         self.db_path = db_path
-        os.makedirs(os.path.dirname(os.path.abspath(db_path)), exist_ok=True)
+        db_dir = os.path.dirname(os.path.abspath(db_path))
+        if db_dir:
+            os.makedirs(db_dir, exist_ok=True)
         self._init_db()
 
     def _get_conn(self) -> sqlite3.Connection:

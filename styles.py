@@ -1,187 +1,246 @@
 import streamlit as st
 
-CLAUDE_CSS = """
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Lora:ital,wght@0,500;0,600;1,400&display=swap');
+def apply_claude_styles():
+    st.markdown(
+        """
+        <style>
+        /* Claude.ai Core Color Palette & Typography */
+        @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        :root {
+            --claude-bg: #FAF9F5;
+            --claude-sidebar: #F3F0E6;
+            --claude-card: #FFFFFF;
+            --claude-border: #E5E0D8;
+            --claude-text: #2C2825;
+            --claude-muted: #736E65;
+            --claude-coral: #DA7756;
+            --claude-coral-hover: #C85B38;
+            --claude-coral-light: #FDF4F0;
+            --claude-badge-blue: #1D4ED8;
+            --claude-badge-bg: #EFF6FF;
+        }
 
-:root {
-    --claude-bg: #FAF9F5;
-    --claude-surface: #F3EFEA;
-    --claude-surface-card: #FFFFFF;
-    --claude-sidebar: #EFECE6;
-    --claude-border: #E5DFD7;
-    --claude-text: #1F1E1D;
-    --claude-muted: #75716B;
-    --claude-terracotta: #DA7756;
-    --claude-terracotta-hover: #C66343;
-    --claude-accent-soft: #F9EDE8;
-    --claude-code-bg: #21252B;
-}
+        /* App Background */
+        .stApp {
+            background-color: var(--claude-bg);
+            color: var(--claude-text);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
 
-/* Light / Dark Mode support */
-@media (prefers-color-scheme: dark) {
-    :root {
-        --claude-bg: #19191B;
-        --claude-surface: #222226;
-        --claude-surface-card: #2B2B30;
-        --claude-sidebar: #1D1D21;
-        --claude-border: #33333A;
-        --claude-text: #F0EFEB;
-        --claude-muted: #A3A19E;
-        --claude-terracotta: #E08264;
-        --claude-accent-soft: #38241D;
-    }
-}
+        /* Sidebar Styling */
+        section[data-testid="stSidebar"] {
+            background-color: var(--claude-sidebar) !important;
+            border-right: 1px solid var(--claude-border) !important;
+        }
 
-html, body, [class*="css"] {
-    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-}
+        section[data-testid="stSidebar"] div[data-testid="stVerticalBlock"] {
+            gap: 0.5rem;
+        }
 
-/* Top App Header */
-.claude-top-bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 14px 20px;
-    background: linear-gradient(135deg, var(--claude-surface), var(--claude-surface-card));
-    border: 1px solid var(--claude-border);
-    border-radius: 14px;
-    margin-bottom: 20px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.03);
-}
+        /* Claude.ai Hero Typography */
+        .claude-hero-container {
+            text-align: center;
+            max-width: 720px;
+            margin: 40px auto 25px auto;
+        }
 
-.claude-brand-title {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-family: 'Lora', serif;
-    font-weight: 600;
-    font-size: 1.35rem;
-    color: var(--claude-terracotta);
-    letter-spacing: -0.2px;
-}
+        .claude-spark-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: var(--claude-coral-light);
+            color: var(--claude-coral);
+            font-size: 24px;
+            margin-bottom: 16px;
+        }
 
-.claude-badge {
-    background-color: var(--claude-accent-soft);
-    color: var(--claude-terracotta);
-    padding: 4px 12px;
-    border-radius: 9999px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    border: 1px solid var(--claude-border);
-}
+        .claude-hero-title {
+            font-family: 'Instrument Serif', Georgia, serif;
+            font-size: 2.75rem;
+            font-weight: 400;
+            color: var(--claude-text);
+            line-height: 1.15;
+            margin-bottom: 8px;
+            letter-spacing: -0.02em;
+        }
 
-/* Sidebar Styling */
-[data-testid="stSidebar"] {
-    background-color: var(--claude-sidebar);
-    border-right: 1px solid var(--claude-border);
-}
+        .claude-hero-subtitle {
+            font-size: 1rem;
+            color: var(--claude-muted);
+            font-weight: 400;
+        }
 
-.sidebar-header {
-    font-weight: 700;
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-    color: var(--claude-muted);
-    margin: 16px 0 8px 0;
-}
+        /* Quick Starter Cards (2x2 Grid) */
+        .starter-card-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            max-width: 740px;
+            margin: 24px auto 30px auto;
+        }
 
-/* Thinking Box (Claude 3.7 Extended Reasoning) */
-.thinking-box {
-    background: rgba(218, 119, 86, 0.05);
-    border-left: 3px solid var(--claude-terracotta);
-    border-radius: 0 8px 8px 0;
-    padding: 12px 16px;
-    margin: 8px 0 16px 0;
-    font-size: 0.88rem;
-    line-height: 1.5;
-    color: var(--claude-muted);
-    font-family: 'JetBrains Mono', monospace;
-}
+        .starter-card {
+            background: var(--claude-card);
+            border: 1px solid var(--claude-border);
+            border-radius: 14px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            text-align: left;
+        }
 
-.thinking-label {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-weight: 700;
-    font-size: 0.78rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--claude-terracotta);
-    margin-bottom: 6px;
-}
+        .starter-card:hover {
+            border-color: var(--claude-coral);
+            box-shadow: 0 4px 16px rgba(218, 119, 86, 0.08);
+            transform: translateY(-1px);
+        }
 
-/* Artifacts View */
-.artifact-card-preview {
-    background-color: var(--claude-surface-card);
-    border: 1px solid var(--claude-border);
-    border-radius: 12px;
-    padding: 16px;
-    margin: 12px 0;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.02);
-}
+        .starter-card-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--claude-text);
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
 
-.artifact-card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid var(--claude-border);
-}
+        .starter-card-desc {
+            font-size: 0.82rem;
+            color: var(--claude-muted);
+            line-height: 1.4;
+        }
 
-.artifact-badge {
-    background-color: var(--claude-accent-soft);
-    color: var(--claude-terracotta);
-    font-size: 0.75rem;
-    font-weight: 700;
-    padding: 2px 8px;
-    border-radius: 6px;
-    text-transform: uppercase;
-}
+        /* Claude Input Container */
+        .claude-prompt-card {
+            background: var(--claude-card);
+            border: 1px solid var(--claude-border);
+            border-radius: 18px;
+            padding: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+            margin: 0 auto;
+            max-width: 760px;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
 
-/* Chat Input Bar Fixes */
-.stChatInput {
-    border-radius: 16px !important;
-}
+        .claude-prompt-card:focus-within {
+            border-color: var(--claude-coral);
+            box-shadow: 0 6px 24px rgba(218, 119, 86, 0.12);
+        }
 
-/* Empty State Greeting */
-.claude-hero {
-    text-align: center;
-    padding: 40px 20px;
-    margin: 20px auto;
-    max-width: 650px;
-}
-.claude-hero-title {
-    font-family: 'Lora', serif;
-    font-size: 2.2rem;
-    font-weight: 600;
-    color: var(--claude-text);
-    margin-bottom: 12px;
-}
-.claude-hero-sub {
-    font-size: 1rem;
-    color: var(--claude-muted);
-    line-height: 1.6;
-}
-.claude-prompt-card {
-    background: var(--claude-surface);
-    border: 1px solid var(--claude-border);
-    border-radius: 12px;
-    padding: 14px 16px;
-    text-align: left;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-size: 0.9rem;
-    color: var(--claude-text);
-    margin-bottom: 10px;
-}
-.claude-prompt-card:hover {
-    border-color: var(--claude-terracotta);
-    background: var(--claude-accent-soft);
-}
-</style>
-"""
+        /* Buttons */
+        .stButton > button {
+            border-radius: 10px;
+            border: 1px solid var(--claude-border);
+            background-color: var(--claude-card);
+            color: var(--claude-text);
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
 
-def apply_claude_styles() -> None:
-    st.markdown(CLAUDE_CSS, unsafe_allow_html=True)
+        .stButton > button:hover {
+            border-color: var(--claude-coral);
+            color: var(--claude-coral);
+            background-color: var(--claude-coral-light);
+        }
+
+        .stButton > button[kind="primary"] {
+            background-color: var(--claude-coral) !important;
+            border-color: var(--claude-coral) !important;
+            color: #FFFFFF !important;
+        }
+
+        .stButton > button[kind="primary"]:hover {
+            background-color: var(--claude-coral-hover) !important;
+            border-color: var(--claude-coral-hover) !important;
+        }
+
+        /* Model Badge Pill */
+        .model-pill-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--claude-sidebar);
+            border: 1px solid var(--claude-border);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--claude-text);
+        }
+
+        .new-badge {
+            background: var(--claude-badge-bg);
+            color: var(--claude-badge-blue);
+            font-size: 0.65rem;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Front-End Error Diagnostic Card */
+        .claude-error-card {
+            background-color: #FEF2F2;
+            border: 1px solid #FCA5A5;
+            border-left: 4px solid #EF4444;
+            border-radius: 12px;
+            padding: 16px;
+            margin: 16px 0;
+            color: #991B1B;
+        }
+
+        .claude-error-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            margin-bottom: 6px;
+        }
+
+        .claude-error-code {
+            background: #FEE2E2;
+            color: #B91C1C;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-family: monospace;
+            font-weight: 700;
+        }
+
+        .claude-error-body {
+            font-size: 0.88rem;
+            color: #7F1D1D;
+            line-height: 1.5;
+        }
+
+        /* Reasoning / Extended Thinking Panel */
+        .thinking-panel {
+            background: #F9F8F5;
+            border: 1px solid var(--claude-border);
+            border-radius: 10px;
+            padding: 12px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 0.82rem;
+            color: var(--claude-muted);
+            margin-bottom: 12px;
+            line-height: 1.5;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        /* Hide Streamlit Default Header and Footer */
+        #MainMenu {visibility: hidden;}
+        footer {visibility: hidden;}
+        header[data-testid="stHeader"] {background: transparent;}
+        </style>
+        """,
+        unsafe_allow_html=True
+    )

@@ -22,7 +22,7 @@ DEFAULT_CLAUDE_MODELS: Dict[str, Dict[str, Any]] = {
         "input_rate": 3.0,
         "output_rate": 15.0,
         "supports_thinking": True,
-        "max_output_tokens": 64000
+        "max_output_tokens": 128000
     },
     "Claude 3.5 Sonnet": {
         "id": "claude-3-5-sonnet-20241022",
@@ -62,7 +62,7 @@ DEFAULT_CLAUDE_MODELS: Dict[str, Dict[str, Any]] = {
         "input_rate": 10.0,
         "output_rate": 50.0,
         "supports_thinking": True,
-        "max_output_tokens": 64000
+        "max_output_tokens": 128000
     },
     "Sonnet 5": {
         "id": "claude-sonnet-5",
@@ -72,7 +72,7 @@ DEFAULT_CLAUDE_MODELS: Dict[str, Dict[str, Any]] = {
         "input_rate": 2.0,
         "output_rate": 10.0,
         "supports_thinking": True,
-        "max_output_tokens": 64000
+        "max_output_tokens": 128000
     },
     "Fable 5": {
         "id": "claude-fable-5",
@@ -82,7 +82,7 @@ DEFAULT_CLAUDE_MODELS: Dict[str, Dict[str, Any]] = {
         "input_rate": 5.0,
         "output_rate": 25.0,
         "supports_thinking": True,
-        "max_output_tokens": 64000
+        "max_output_tokens": 128000
     },
     "Opus 4.8": {
         "id": "claude-opus-4-8",
@@ -92,7 +92,7 @@ DEFAULT_CLAUDE_MODELS: Dict[str, Dict[str, Any]] = {
         "input_rate": 10.0,
         "output_rate": 50.0,
         "supports_thinking": True,
-        "max_output_tokens": 64000
+        "max_output_tokens": 128000
     },
     "Opus 4.7": {
         "id": "claude-opus-4-7",
@@ -102,7 +102,7 @@ DEFAULT_CLAUDE_MODELS: Dict[str, Dict[str, Any]] = {
         "input_rate": 10.0,
         "output_rate": 50.0,
         "supports_thinking": True,
-        "max_output_tokens": 64000
+        "max_output_tokens": 128000
     },
     "Sonnet 4.6": {
         "id": "claude-sonnet-4-6",
@@ -112,7 +112,7 @@ DEFAULT_CLAUDE_MODELS: Dict[str, Dict[str, Any]] = {
         "input_rate": 3.0,
         "output_rate": 15.0,
         "supports_thinking": True,
-        "max_output_tokens": 64000
+        "max_output_tokens": 128000
     },
     "Opus 4.6": {
         "id": "claude-opus-4-6",
@@ -122,7 +122,7 @@ DEFAULT_CLAUDE_MODELS: Dict[str, Dict[str, Any]] = {
         "input_rate": 10.0,
         "output_rate": 50.0,
         "supports_thinking": True,
-        "max_output_tokens": 64000
+        "max_output_tokens": 128000
     },
     "Opus 4.5": {
         "id": "claude-opus-4-5-20251101",
@@ -132,7 +132,7 @@ DEFAULT_CLAUDE_MODELS: Dict[str, Dict[str, Any]] = {
         "input_rate": 10.0,
         "output_rate": 50.0,
         "supports_thinking": True,
-        "max_output_tokens": 64000
+        "max_output_tokens": 128000
     },
     "Haiku 4.5": {
         "id": "claude-haiku-4-5-20251001",
@@ -152,32 +152,29 @@ DEFAULT_CLAUDE_MODELS: Dict[str, Dict[str, Any]] = {
         "input_rate": 3.0,
         "output_rate": 15.0,
         "supports_thinking": True,
-        "max_output_tokens": 64000
+        "max_output_tokens": 128000
     },
 }
 
 CLAUDE_MODELS = {k: v["id"] for k, v in DEFAULT_CLAUDE_MODELS.items()}
 MODEL_DETAILS = DEFAULT_CLAUDE_MODELS
 
-# Calibrated Reasoning Budgets & Max Token Limits
+# Unconstrained Reasoning Budgets
 EFFORT_LEVELS = {
     "Low": {
         "label": "Low",
         "budget": 2048,
-        "max_tokens": 16384,
         "description": "Fast generation with concise reasoning"
     },
     "Medium": {
         "label": "Medium",
-        "budget": 6144,
-        "max_tokens": 32768,
+        "budget": 8192,
         "description": "Balanced step-by-step reasoning"
     },
     "High": {
         "label": "High",
-        "budget": 16384,
-        "max_tokens": 64000,
-        "description": "Deep chain-of-thought analysis"
+        "budget": 32768,
+        "description": "Deep unconstrained chain-of-thought analysis"
     }
 }
 
@@ -297,8 +294,7 @@ class ClaudeEngine:
         temperature: float = 1.0,
     ) -> Generator[Dict[str, Any], None, None]:
         """
-        Streams response from Claude and computes token usage & costs.
-        Ensures ample max_tokens headroom so thinking never consumes all output capacity.
+        Streams response from Claude with fully unconstrained token capacity (no artificial capping).
         """
         if not self.client:
             raise ClaudeModelError(
@@ -331,20 +327,13 @@ class ClaudeEngine:
 
         effort_config = EFFORT_LEVELS.get(effort_level, EFFORT_LEVELS["Medium"])
         budget = effort_config["budget"]
-        default_max = effort_config.get("max_tokens", 32768)
 
         model_meta = MODEL_DETAILS.get(model_name, {})
         supports_thinking = model_meta.get("supports_thinking", False) or "3-7" in model_id or "opus-4" in model_id or "5" in model_id
 
-        # Calculate safe max_tokens
-        if supports_thinking:
-            # Thinking requires max_tokens strictly greater than budget with generous output room
-            actual_max_tokens = max(max_tokens or default_max, budget + 16384)
-            # Cap at model limit
-            model_limit = model_meta.get("max_output_tokens", 64000)
-            actual_max_tokens = min(actual_max_tokens, model_limit)
-        else:
-            actual_max_tokens = min(max_tokens or 8192, model_meta.get("max_output_tokens", 8192))
+        # Send full unconstrained token ceiling for the model
+        model_max_limit = model_meta.get("max_output_tokens", 128000 if supports_thinking else 8192)
+        actual_max_tokens = max_tokens if max_tokens else model_max_limit
 
         kwargs: Dict[str, Any] = {
             "model": model_id,

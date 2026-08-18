@@ -45,6 +45,7 @@ def main():
         self.assertIn("1,000 in", badge)
         self.assertIn("500 out", badge)
         self.assertIn("$0.0105", badge)
+        self.assertNotIn("⚡", badge)
 
     def test_models_and_presets_exist(self):
         self.assertIn("Opus 5", CLAUDE_MODELS)

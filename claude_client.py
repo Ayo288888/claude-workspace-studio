@@ -199,7 +199,7 @@ def format_cost_badge(input_tokens: int, output_tokens: int, cost: float) -> str
         cost_str = "<$0.0001"
     else:
         cost_str = f"${cost:.4f}"
-    return f"⚡ {total_tokens:,} tokens ({input_tokens:,} in, {output_tokens:,} out) • {cost_str}"
+    return f"{total_tokens:,} tokens ({input_tokens:,} in, {output_tokens:,} out) • {cost_str}"
 
 def extract_artifacts(text: str) -> List[Dict[str, str]]:
     """Extract code blocks, plans, and documents as inspectable artifacts."""

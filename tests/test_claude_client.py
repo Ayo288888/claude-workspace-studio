@@ -29,7 +29,7 @@ def main():
         self.assertEqual(CLAUDE_MODELS["Opus 5"], "claude-opus-5")
         self.assertEqual(CLAUDE_MODELS["Sonnet 5"], "claude-sonnet-5")
         self.assertEqual(CLAUDE_MODELS["Fable 5"], "claude-fable-5")
-        self.assertEqual(len(CLAUDE_MODELS), 10)
+        self.assertGreaterEqual(len(CLAUDE_MODELS), 10)
 
     def test_effort_levels(self):
         self.assertIn("Low", EFFORT_LEVELS)

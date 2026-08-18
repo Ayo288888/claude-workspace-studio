@@ -30,6 +30,9 @@ if "key_manager" not in st.session_state:
 if "encrypted_api_key" not in st.session_state:
     st.session_state.encrypted_api_key = ""
 
+if "live_models_cache" not in st.session_state:
+    st.session_state.live_models_cache = []
+
 # Check environment variable for initial key if provided locally
 if not st.session_state.encrypted_api_key:
     init_key = os.environ.get("ANTHROPIC_API_KEY", "")
@@ -57,7 +60,7 @@ if not st.session_state.current_session_id:
     else:
         new_id = db.create_session(
             title="New Chat",
-            model="Opus 5",
+            model="Claude 3.7 Sonnet (Reasoning)",
             system_prompt=SYSTEM_PRESETS["General Assistant"]
         )
         st.session_state.current_session_id = new_id
@@ -67,7 +70,7 @@ current_session = db.get_session(st.session_state.current_session_id)
 if not current_session:
     new_id = db.create_session(
         title="New Chat",
-        model="Opus 5",
+        model="Claude 3.7 Sonnet (Reasoning)",
         system_prompt=SYSTEM_PRESETS["General Assistant"]
     )
     st.session_state.current_session_id = new_id
@@ -80,6 +83,31 @@ def get_current_api_key() -> str:
     return ""
 
 current_key = get_current_api_key()
+
+# Fetch live models from Anthropic Console if key is authenticated and cache is empty
+if current_key and not st.session_state.live_models_cache:
+    try:
+        temp_engine = ClaudeEngine(api_key=current_key)
+        live = temp_engine.fetch_live_models()
+        if live:
+            st.session_state.live_models_cache = live
+    except Exception:
+        pass
+
+# Build Model Choices
+model_choices = {}
+# Add live models from Console if available
+if st.session_state.live_models_cache:
+    for lm in st.session_state.live_models_cache:
+        label = f"{lm['display_name']} ({lm['id']})"
+        model_choices[label] = lm['id']
+
+# Add known default models
+for k, v in CLAUDE_MODELS.items():
+    if k not in model_choices:
+        model_choices[k] = v
+
+model_choices["Custom Model ID..."] = "custom"
 
 # ==========================================
 # SIDEBAR
@@ -100,7 +128,7 @@ with st.sidebar:
     if st.button("➕ Start new chat", use_container_width=True, type="primary"):
         new_id = db.create_session(
             title="New Chat",
-            model="Opus 5",
+            model="Claude 3.7 Sonnet (Reasoning)",
             system_prompt=SYSTEM_PRESETS["General Assistant"]
         )
         st.session_state.current_session_id = new_id
@@ -112,14 +140,21 @@ with st.sidebar:
     # Model & Reasoning Selection inside Sidebar
     st.markdown("<div style='font-size: 0.78rem; font-weight: 700; color: #736E65; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;'>Model & Effort</div>", unsafe_allow_html=True)
     
-    model_options = list(CLAUDE_MODELS.keys())
-    selected_model_name = st.selectbox(
+    selected_model_label = st.selectbox(
         "Choose Model",
-        options=model_options,
+        options=list(model_choices.keys()),
         index=0,
         label_visibility="collapsed"
     )
-    selected_model_id = CLAUDE_MODELS[selected_model_name]
+    
+    if selected_model_label == "Custom Model ID...":
+        custom_id_input = st.text_input("Enter Model ID", placeholder="e.g. claude-opus-4-6", help="Type exact model identifier from your Claude console.")
+        selected_model_id = custom_id_input.strip() if custom_id_input else "claude-3-7-sonnet-20250219"
+        selected_model_name = f"Custom ({selected_model_id})"
+    else:
+        selected_model_id = model_choices[selected_model_label]
+        selected_model_name = selected_model_label
+
     model_meta = MODEL_DETAILS.get(selected_model_name, {})
 
     selected_effort = st.select_slider(
@@ -133,8 +168,8 @@ with st.sidebar:
     badge_html = f"<span class='new-pill'>{badge}</span>" if badge else ""
     st.markdown(f"""
     <div style="font-size: 0.76rem; color: #736E65; margin-top: -6px; margin-bottom: 12px; line-height: 1.35;">
-        {badge_html} <em>{model_meta.get('tagline', '')}</em><br/>
-        <span style="color: #A09A8F;">{model_meta.get('pricing', '')}</span>
+        {badge_html} <em>{model_meta.get('tagline', 'Direct Anthropic Engine')}</em><br/>
+        <span style="color: #A09A8F;">Target ID: <code>{selected_model_id}</code></span>
     </div>
     """, unsafe_allow_html=True)
 
@@ -185,28 +220,27 @@ with st.sidebar:
     st.markdown("<div style='font-size: 0.78rem; font-weight: 700; color: #736E65; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px;'>Authentication & Security</div>", unsafe_allow_html=True)
     
     if current_key:
-        # Key is already securely held in-memory encrypted. Show status only (no DOM password input)
         masked_fingerprint = mask_api_key(current_key)
         st.markdown(f"""
         <div class="security-badge-container">
             <div class="security-badge-header">🔒 Key Encrypted & Active</div>
             <div class="security-badge-sub">
                 <strong>Fingerprint:</strong> <code>{masked_fingerprint}</code><br/>
-                • Encrypted in-memory (AES-256)<br/>
-                • Zero disk or database storage<br/>
-                • Purged automatically on tab close
+                • In-Memory AES-256 cipher<br/>
+                • Zero disk or database persistence<br/>
+                • Auto-purged on session end
             </div>
         </div>
         """, unsafe_allow_html=True)
         
         if st.button("Disconnect & Purge Key", use_container_width=True, type="secondary"):
             st.session_state.encrypted_api_key = ""
+            st.session_state.live_models_cache = []
             st.rerun()
     else:
-        # No key currently configured. Show single-use encrypted input.
         st.markdown("""
         <div style="font-size: 0.78rem; color: #736E65; margin-bottom: 8px;">
-            Paste your Anthropic API Key. It is encrypted in volatile memory only and never saved to disk.
+            Paste your Anthropic API Key. It is encrypted in volatile memory and never saved to disk.
         </div>
         """, unsafe_allow_html=True)
         
@@ -221,8 +255,8 @@ with st.sidebar:
             
             if submit_key:
                 if user_raw_key and user_raw_key.strip():
-                    # Immediately encrypt in memory and wipe plaintext
                     st.session_state.encrypted_api_key = st.session_state.key_manager.encrypt_key(user_raw_key.strip())
+                    st.session_state.live_models_cache = []
                     del user_raw_key
                     st.rerun()
                 else:

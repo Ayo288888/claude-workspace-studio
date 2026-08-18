@@ -12,20 +12,36 @@ class ClaudeModelError(Exception):
         self.message = message
         super().__init__(f"[{status_code or 'ERROR'}] {model_name} ({model_id}): {message}")
 
-CLAUDE_MODELS = {
-    "Opus 5": "claude-opus-5",
-    "Sonnet 5": "claude-sonnet-5",
-    "Fable 5": "claude-fable-5",
-    "Opus 4.8": "claude-opus-4-8",
-    "Opus 4.7": "claude-opus-4-7",
-    "Sonnet 4.6": "claude-sonnet-4-6",
-    "Opus 4.6": "claude-opus-4-6",
-    "Opus 4.5": "claude-opus-4-5",
-    "Haiku 4.5": "claude-haiku-4-5",
-    "Sonnet 4.5": "claude-sonnet-4-5",
-}
-
-MODEL_DETAILS = {
+# Known & Documented Claude Models from Anthropic Console / Platform
+DEFAULT_CLAUDE_MODELS: Dict[str, Dict[str, Any]] = {
+    "Claude 3.7 Sonnet (Reasoning)": {
+        "id": "claude-3-7-sonnet-20250219",
+        "badge": "Recommended",
+        "tagline": "Hybrid reasoning, coding & architecture",
+        "pricing": "Input $3/MTok • Output $15/MTok",
+        "supports_thinking": True,
+    },
+    "Claude 3.5 Sonnet": {
+        "id": "claude-3-5-sonnet-20241022",
+        "badge": None,
+        "tagline": "Industry-leading intelligence and speed",
+        "pricing": "Input $3/MTok • Output $15/MTok",
+        "supports_thinking": False,
+    },
+    "Claude 3.5 Haiku": {
+        "id": "claude-3-5-haiku-20241022",
+        "badge": None,
+        "tagline": "Lightning-fast low latency responses",
+        "pricing": "Input $0.80/MTok • Output $4/MTok",
+        "supports_thinking": False,
+    },
+    "Claude 3 Opus": {
+        "id": "claude-3-opus-20240229",
+        "badge": None,
+        "tagline": "Deep writing, synthesis & analysis",
+        "pricing": "Input $15/MTok • Output $75/MTok",
+        "supports_thinking": False,
+    },
     "Opus 5": {
         "id": "claude-opus-5",
         "badge": "New",
@@ -76,27 +92,30 @@ MODEL_DETAILS = {
         "supports_thinking": True,
     },
     "Opus 4.5": {
-        "id": "claude-opus-4-5",
+        "id": "claude-opus-4-5-20251101",
         "badge": None,
         "tagline": "High intelligence reasoning engine",
         "pricing": "Input $10/MTok • Output $50/MTok",
         "supports_thinking": True,
     },
     "Haiku 4.5": {
-        "id": "claude-haiku-4-5",
+        "id": "claude-haiku-4-5-20251001",
         "badge": None,
-        "tagline": "Lightning-fast low latency responses",
+        "tagline": "Ultra low-latency responses",
         "pricing": "Input $0.25/MTok • Output $1.25/MTok",
         "supports_thinking": False,
     },
     "Sonnet 4.5": {
-        "id": "claude-sonnet-4-5",
+        "id": "claude-sonnet-4-5-20250929",
         "badge": None,
         "tagline": "High performance coding & analysis",
         "pricing": "Input $3/MTok • Output $15/MTok",
         "supports_thinking": True,
     },
 }
+
+CLAUDE_MODELS = {k: v["id"] for k, v in DEFAULT_CLAUDE_MODELS.items()}
+MODEL_DETAILS = DEFAULT_CLAUDE_MODELS
 
 EFFORT_LEVELS = {
     "Low": {
@@ -148,7 +167,7 @@ class ClaudeEngine:
                 model_id="auth",
                 status_code=401,
                 error_type="AUTHENTICATION_REQUIRED",
-                message="No Anthropic API key provided. Please configure your API key in the sidebar or settings."
+                message="No Anthropic API key provided. Please configure your API key in the sidebar."
             )
         self.api_key = api_key.strip()
         try:
@@ -158,6 +177,36 @@ class ClaudeEngine:
         except ImportError:
             self._anthropic = None
             self.client = None
+
+    def fetch_live_models(self) -> List[Dict[str, Any]]:
+        """
+        Dynamically queries GET /v1/models using client.models.list()
+        to return all models available for the authenticated API key.
+        """
+        if not self.client:
+            return []
+        try:
+            page = self.client.models.list()
+            live_models = []
+            for item in page.data:
+                model_id = getattr(item, "id", "")
+                display_name = getattr(item, "display_name", model_id)
+                capabilities = getattr(item, "capabilities", None)
+                
+                supports_thinking = False
+                if capabilities:
+                    thinking_cap = getattr(capabilities, "thinking", None)
+                    if thinking_cap and getattr(thinking_cap, "supported", False):
+                        supports_thinking = True
+                
+                live_models.append({
+                    "id": model_id,
+                    "display_name": display_name,
+                    "supports_thinking": supports_thinking,
+                })
+            return live_models
+        except Exception:
+            return []
 
     def stream_chat(
         self,
@@ -170,8 +219,8 @@ class ClaudeEngine:
         temperature: float = 1.0,
     ) -> Generator[Dict[str, Any], None, None]:
         """
-        Streams response from Claude directly without silent fallbacks.
-        If the model or API fails, yields/raises a structured ClaudeModelError.
+        Streams response from Claude using Anthropic Messages API.
+        Validates messages and configures thinking parameters correctly.
         """
         if not self.client:
             raise ClaudeModelError(
@@ -182,26 +231,47 @@ class ClaudeEngine:
                 message="Anthropic Python SDK is not installed in the current environment."
             )
 
+        # Clean messages history (ensure valid role and non-empty content)
+        clean_messages = []
+        for m in messages:
+            role = m.get("role")
+            content = m.get("content", "")
+            if role in ["user", "assistant"] and content and str(content).strip():
+                clean_messages.append({"role": role, "content": str(content).strip()})
+
+        if not clean_messages:
+            raise ClaudeModelError(
+                model_name=model_name,
+                model_id=model_id,
+                status_code=400,
+                error_type="INVALID_MESSAGES",
+                message="No valid user message to send to the Claude API."
+            )
+
         effort_config = EFFORT_LEVELS.get(effort_level, EFFORT_LEVELS["Medium"])
         budget = effort_config["budget"]
 
+        # Determine thinking support
+        model_meta = MODEL_DETAILS.get(model_name, {})
+        supports_thinking = model_meta.get("supports_thinking", False) or "3-7" in model_id or "opus-4" in model_id or "5" in model_id
+
+        actual_max_tokens = max(max_tokens, budget + 2048) if supports_thinking else max_tokens
+
         kwargs: Dict[str, Any] = {
             "model": model_id,
-            "max_tokens": max_tokens,
-            "messages": messages,
+            "max_tokens": actual_max_tokens,
+            "messages": clean_messages,
         }
 
-        if system:
-            kwargs["system"] = system
+        if system and system.strip():
+            kwargs["system"] = system.strip()
 
-        # Configure Extended Thinking if supported and budget > 0
-        model_meta = MODEL_DETAILS.get(model_name, {})
-        if model_meta.get("supports_thinking", False) and budget > 0:
+        # Configure Thinking only if model supports it
+        if supports_thinking and budget > 0:
             kwargs["thinking"] = {
                 "type": "enabled",
-                "budget_tokens": min(budget, max_tokens - 1000)
+                "budget_tokens": budget
             }
-            # When thinking is enabled, Anthropic requires temperature=1.0
             kwargs["temperature"] = 1.0
         else:
             kwargs["temperature"] = temperature
@@ -227,7 +297,7 @@ class ClaudeEngine:
                 model_id=model_id,
                 status_code=404,
                 error_type="MODEL_NOT_FOUND",
-                message=f"The model '{model_id}' was not found or is not enabled for your API account: {str(e)}"
+                message=f"Model '{model_id}' was not found or is not enabled for your API key: {str(e)}"
             )
         except self._anthropic.AuthenticationError as e:
             raise ClaudeModelError(
@@ -251,7 +321,36 @@ class ClaudeEngine:
                 model_id=model_id,
                 status_code=403,
                 error_type="PERMISSION_DENIED",
-                message=f"Access to model '{model_id}' is restricted or requires upgraded account tier: {str(e)}"
+                message=f"Access to model '{model_id}' is restricted or requires an upgraded account tier: {str(e)}"
+            )
+        except self._anthropic.BadRequestError as e:
+            # If thinking was rejected on this model, retry cleanly without thinking parameter
+            if "thinking" in str(e).lower() and "thinking" in kwargs:
+                del kwargs["thinking"]
+                kwargs["temperature"] = temperature
+                kwargs["max_tokens"] = 4096
+                try:
+                    with self.client.messages.stream(**kwargs) as retry_stream:
+                        for event in retry_stream:
+                            if event.type == "content_block_delta":
+                                delta = event.delta
+                                if delta.type == "text_delta":
+                                    yield {"type": "text", "delta": delta.text}
+                    return
+                except Exception as retry_err:
+                    raise ClaudeModelError(
+                        model_name=model_name,
+                        model_id=model_id,
+                        status_code=400,
+                        error_type="BAD_REQUEST",
+                        message=f"Bad request: {str(retry_err)}"
+                    )
+            raise ClaudeModelError(
+                model_name=model_name,
+                model_id=model_id,
+                status_code=400,
+                error_type="BAD_REQUEST",
+                message=f"Bad request parameters for model '{model_id}': {str(e)}"
             )
         except self._anthropic.APIStatusError as e:
             raise ClaudeModelError(

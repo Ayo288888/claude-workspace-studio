@@ -33,6 +33,8 @@ if "encrypted_api_key" not in st.session_state:
 # Check environment variable for initial key if provided locally
 if not st.session_state.encrypted_api_key:
     init_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if not init_key and hasattr(st, "secrets") and "ANTHROPIC_API_KEY" in st.secrets:
+        init_key = st.secrets["ANTHROPIC_API_KEY"]
     if init_key:
         st.session_state.encrypted_api_key = st.session_state.key_manager.encrypt_key(init_key)
 
@@ -46,8 +48,6 @@ if "current_session_id" not in st.session_state:
     st.session_state.current_session_id = None
 if "active_starter_prompt" not in st.session_state:
     st.session_state.active_starter_prompt = ""
-if "uploaded_files_data" not in st.session_state:
-    st.session_state.uploaded_files_data = []
 
 # Ensure active session exists
 sessions = db.get_sessions()
@@ -87,10 +87,10 @@ current_key = get_current_api_key()
 with st.sidebar:
     # Claude Header Branding
     st.markdown("""
-    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px; padding: 4px 0;">
-        <span style="font-size: 24px; color: #DA7756;">✨</span>
+    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding: 2px 0;">
+        <span style="font-size: 26px; color: #DA7756; line-height: 1;">✨</span>
         <div>
-            <div style="font-weight: 700; font-size: 1.15rem; color: #2C2825; line-height: 1.1;">Claude</div>
+            <div style="font-weight: 700; font-size: 1.2rem; color: #2C2825; line-height: 1.1;">Claude</div>
             <div style="font-size: 0.75rem; color: #736E65;">Workspace Studio</div>
         </div>
     </div>
@@ -104,28 +104,70 @@ with st.sidebar:
             system_prompt=SYSTEM_PRESETS["General Assistant"]
         )
         st.session_state.current_session_id = new_id
-        st.session_state.uploaded_files_data = []
         st.session_state.active_starter_prompt = ""
         st.rerun()
 
-    st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
+
+    # Model & Reasoning Selection inside Sidebar
+    st.markdown("<div style='font-size: 0.78rem; font-weight: 700; color: #736E65; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;'>Model & Effort</div>", unsafe_allow_html=True)
+    
+    model_options = list(CLAUDE_MODELS.keys())
+    selected_model_name = st.selectbox(
+        "Choose Model",
+        options=model_options,
+        index=0,
+        label_visibility="collapsed"
+    )
+    selected_model_id = CLAUDE_MODELS[selected_model_name]
+    model_meta = MODEL_DETAILS.get(selected_model_name, {})
+
+    selected_effort = st.select_slider(
+        "Reasoning Effort",
+        options=list(EFFORT_LEVELS.keys()),
+        value="Medium",
+        help="Low: Fast & light • Medium: Balanced • High: Deep chain-of-thought"
+    )
+
+    badge = model_meta.get("badge")
+    badge_html = f"<span class='new-pill'>{badge}</span>" if badge else ""
+    st.markdown(f"""
+    <div style="font-size: 0.76rem; color: #736E65; margin-top: -6px; margin-bottom: 12px; line-height: 1.35;">
+        {badge_html} <em>{model_meta.get('tagline', '')}</em><br/>
+        <span style="color: #A09A8F;">{model_meta.get('pricing', '')}</span>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.divider()
+
+    # System Preset Selector
+    st.markdown("<div style='font-size: 0.78rem; font-weight: 700; color: #736E65; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;'>System Preset</div>", unsafe_allow_html=True)
+    selected_preset = st.selectbox(
+        "System Preset",
+        options=list(SYSTEM_PRESETS.keys()),
+        index=0,
+        label_visibility="collapsed"
+    )
+    system_prompt = SYSTEM_PRESETS[selected_preset]
+
+    st.divider()
 
     # Conversation History List
-    st.markdown("<div style='font-size: 0.8rem; font-weight: 600; color: #736E65; text-transform: uppercase; letter-spacing: 0.05em;'>Recent Chats</div>", unsafe_allow_html=True)
+    st.markdown("<div style='font-size: 0.78rem; font-weight: 700; color: #736E65; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px;'>Recent Chats</div>", unsafe_allow_html=True)
     
-    for s in sessions[:25]:
+    for s in sessions[:20]:
         is_active = s["id"] == st.session_state.current_session_id
         col_btn, col_del = st.columns([0.82, 0.18])
         with col_btn:
-            btn_label = f"💬 {s['title'][:22]}..." if len(s['title']) > 22 else f"💬 {s['title']}"
+            title_text = s['title'][:20] + "..." if len(s['title']) > 20 else s['title']
+            btn_label = f"💬 {title_text}"
             if st.button(
                 btn_label,
                 key=f"sess_{s['id']}",
                 use_container_width=True,
-                type="secondary" if not is_active else "primary"
+                type="primary" if is_active else "secondary"
             ):
                 st.session_state.current_session_id = s["id"]
-                st.session_state.uploaded_files_data = []
                 st.session_state.active_starter_prompt = ""
                 st.rerun()
         with col_del:
@@ -137,43 +179,30 @@ with st.sidebar:
 
     st.divider()
 
-    # System Role Preset Selector
-    selected_preset = st.selectbox(
-        "System Preset",
-        options=list(SYSTEM_PRESETS.keys()),
-        index=0,
-        help="Select a specialized system persona for Claude."
-    )
-    system_prompt = SYSTEM_PRESETS[selected_preset]
-
-    st.divider()
-
     # Encrypted BYOK Authentication Drawer
-    st.markdown("<div style='font-size: 0.8rem; font-weight: 600; color: #736E65; text-transform: uppercase; letter-spacing: 0.05em;'>Authentication & Security</div>", unsafe_allow_html=True)
+    st.markdown("<div style='font-size: 0.78rem; font-weight: 700; color: #736E65; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;'>Authentication</div>", unsafe_allow_html=True)
     
     if current_key:
         st.success(f"🔒 Authenticated: `{mask_api_key(current_key)}`")
     else:
-        st.warning("⚠️ API Key required to send messages.")
+        st.warning("⚠️ Enter your Anthropic API Key below.")
 
     with st.expander("🔑 Manage API Key", expanded=not bool(current_key)):
         new_key_input = st.text_input(
             "Anthropic API Key",
             type="password",
             placeholder="sk-ant-api03-...",
-            help="Your API key is encrypted in memory during your active browser session and never saved to disk or database."
+            help="Your key is held encrypted in memory and never saved to disk or database."
         )
         col_save, col_clear = st.columns(2)
         with col_save:
             if st.button("Save Key", use_container_width=True):
                 if new_key_input:
                     st.session_state.encrypted_api_key = st.session_state.key_manager.encrypt_key(new_key_input)
-                    st.success("Key encrypted & saved in session memory!")
                     st.rerun()
         with col_clear:
-            if st.button("Clear Key", use_container_width=True):
+            if st.button("Clear", use_container_width=True):
                 st.session_state.encrypted_api_key = ""
-                st.info("Key removed from memory.")
                 st.rerun()
 
 # ==========================================
@@ -193,79 +222,28 @@ elif current_hour < 17:
 else:
     greeting = "Good evening"
 
-# Top Controls Bar: Model & Effort Level Selector
-col_model, col_effort, col_attach = st.columns([0.45, 0.30, 0.25])
-
-with col_model:
-    model_options = list(CLAUDE_MODELS.keys())
-    selected_model_name = st.selectbox(
-        "Model",
-        options=model_options,
-        index=0,
-        label_visibility="collapsed",
-        help="Choose Claude model"
-    )
-    selected_model_id = CLAUDE_MODELS[selected_model_name]
-    model_meta = MODEL_DETAILS.get(selected_model_name, {})
-
-with col_effort:
-    selected_effort = st.selectbox(
-        "Reasoning Effort",
-        options=list(EFFORT_LEVELS.keys()),
-        index=1,
-        label_visibility="collapsed",
-        help="Set reasoning effort & thinking budget"
-    )
-
-with col_attach:
-    uploaded_files = st.file_uploader(
-        "Upload files",
-        accept_multiple_files=True,
-        type=["txt", "md", "py", "js", "ts", "json", "csv", "pdf", "docx"],
-        label_visibility="collapsed"
-    )
-
-# Model Tagline & Pricing Indicator
-tagline = model_meta.get("tagline", "")
-pricing = model_meta.get("pricing", "")
-badge = model_meta.get("badge")
-badge_html = f"<span class='new-badge'>{badge}</span> " if badge else ""
-
-st.markdown(f"""
-<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding: 4px 8px; font-size: 0.8rem; color: #736E65; border-bottom: 1px solid #E5E0D8;">
-    <div>{badge_html}<strong>{selected_model_name}</strong> — {tagline}</div>
-    <div>{pricing} • Effort: <strong>{selected_effort}</strong></div>
-</div>
-""", unsafe_allow_html=True)
-
-# HERO LANDING VIEW (Shown on New Chat with 0 messages)
-if not has_messages:
+# Top Minimal Status Header
+col_header_left, col_header_right = st.columns([0.65, 0.35])
+with col_header_left:
     st.markdown(f"""
-    <div class="claude-hero-container">
-        <div class="claude-spark-icon">✨</div>
-        <div class="claude-hero-title">{greeting}, how can Claude help?</div>
-        <div class="claude-hero-subtitle">Select a prompt below or type your request to begin with {selected_model_name}.</div>
+    <div style="display: flex; align-items: center; gap: 8px; font-size: 0.88rem; color: #736E65; padding: 6px 0;">
+        <span style="font-weight: 600; color: #2C2825;">{selected_model_name}</span>
+        <span>•</span>
+        <span>Effort: <strong>{selected_effort}</strong></span>
+        <span>•</span>
+        <span>{selected_preset}</span>
     </div>
     """, unsafe_allow_html=True)
+with col_header_right:
+    with st.popover("📎 Attach Files"):
+        uploaded_files = st.file_uploader(
+            "Attach context files",
+            accept_multiple_files=True,
+            type=["txt", "md", "py", "js", "ts", "json", "csv", "pdf", "docx"],
+            help="Upload code, markdown, or documents for Claude to analyze."
+        )
 
-    # 4 Quick Starter Prompt Cards
-    card1, card2 = st.columns(2)
-    with card1:
-        if st.button("📝 Write, Edit & Summarize\nDraft content, polish text, or synthesize long documents", key="card_write", use_container_width=True):
-            st.session_state.active_starter_prompt = "Please help me write, structure, and refine a comprehensive document on: "
-            st.rerun()
-        if st.button("⚡ Architect Systems & Code\nDesign modular software, create APIs, and implement features", key="card_code", use_container_width=True):
-            st.session_state.active_starter_prompt = "Act as a Principal Software Architect. Design and implement clean, production-ready code for: "
-            st.rerun()
-    with card2:
-        if st.button("📊 Analyze Data & Documents\nExtract insights, compute statistics, and find key trends", key="card_data", use_container_width=True):
-            st.session_state.active_starter_prompt = "Analyze the provided data or document, extract key insights, and produce structured findings: "
-            st.rerun()
-        if st.button("💡 Brainstorm & Storytelling\nExplore innovative concepts, world-building, and creative narratives", key="card_story", use_container_width=True):
-            st.session_state.active_starter_prompt = "Craft an immersive, vivid narrative exploring: "
-            st.rerun()
-
-# PROCESS ATTACHMENTS
+# Process Uploaded Files Context
 file_context_str = ""
 if uploaded_files:
     processed_files = []
@@ -275,7 +253,34 @@ if uploaded_files:
             processed_files.append(p)
     if processed_files:
         file_context_str = "\n\n" + format_file_for_prompt(processed_files)
-        st.info(f"📎 {len(processed_files)} file(s) attached to context.")
+        st.info(f"📎 {len(processed_files)} file(s) attached to prompt context.")
+
+# HERO LANDING VIEW (Shown on New Chat with 0 messages)
+if not has_messages:
+    st.markdown(f"""
+    <div class="claude-hero-wrapper">
+        <div class="claude-sunburst">✨</div>
+        <div class="claude-title">{greeting}, how can Claude help?</div>
+        <div class="claude-subtitle">Pick a prompt starter below or type your request in the box.</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # 4 Quick Starter Prompt Cards
+    card_col1, card_col2 = st.columns(2)
+    with card_col1:
+        if st.button("📝 Write, Edit & Summarize\nDraft content, polish text, or synthesize documents", key="card_write", use_container_width=True):
+            st.session_state.active_starter_prompt = "Please help me write, structure, and refine a comprehensive document on: "
+            st.rerun()
+        if st.button("⚡ Architect Systems & Code\nDesign modular software, create APIs, and implement features", key="card_code", use_container_width=True):
+            st.session_state.active_starter_prompt = "Act as a Principal Software Architect. Design and implement clean, production-ready code for: "
+            st.rerun()
+    with card_col2:
+        if st.button("📊 Analyze Data & Documents\nExtract insights, compute statistics, and find key trends", key="card_data", use_container_width=True):
+            st.session_state.active_starter_prompt = "Analyze the provided data or document, extract key insights, and produce structured findings: "
+            st.rerun()
+        if st.button("💡 Brainstorm & Storytelling\nExplore innovative concepts, world-building, and creative narratives", key="card_story", use_container_width=True):
+            st.session_state.active_starter_prompt = "Craft an immersive, vivid narrative exploring: "
+            st.rerun()
 
 # CHAT MESSAGE HISTORY
 for msg in messages:
@@ -295,27 +300,31 @@ for msg in messages:
 
 # INPUT HANDLING
 prefill_prompt = st.session_state.active_starter_prompt
+if prefill_prompt and not has_messages:
+    st.info(f"💡 Starter Prompt Selected: *{prefill_prompt}* (Type your topic below to send)")
+
 prompt_input = st.chat_input("Reply to Claude...")
 
-# If starter card clicked or chat input submitted
-user_query = prompt_input or (prefill_prompt if prefill_prompt and prompt_input else None)
-
 if prompt_input:
-    # Clear starter prompt after sending
-    st.session_state.active_starter_prompt = ""
-    
+    # If starter prompt was active, prepend it
+    if prefill_prompt:
+        actual_query = prefill_prompt + prompt_input
+        st.session_state.active_starter_prompt = ""
+    else:
+        actual_query = prompt_input
+        
     current_key = get_current_api_key()
     if not current_key:
         st.error("🔑 Please provide an Anthropic API Key in the sidebar before sending a message.")
         st.stop()
         
-    full_prompt = prompt_input + file_context_str
+    full_prompt = actual_query + file_context_str
     
     # Save user message to database
     db.save_message(st.session_state.current_session_id, "user", full_prompt)
     
     with st.chat_message("user", avatar="👤"):
-        st.markdown(prompt_input)
+        st.markdown(actual_query)
         if file_context_str:
             st.caption(f"📎 Attached {len(uploaded_files)} file(s)")
 
@@ -383,13 +392,15 @@ if prompt_input:
             error_placeholder.markdown(f"""
             <div class="claude-error-card">
                 <div class="claude-error-header">
-                    <span>⚠️ Model Execution Failed</span>
-                    <span class="claude-error-code">{status_badge}</span>
+                    <div class="claude-error-title">
+                        <span>⚠️</span> Model Execution Failed
+                    </div>
+                    <div class="claude-error-code">{status_badge}</div>
                 </div>
                 <div class="claude-error-body">
                     <strong>Model:</strong> {cme.model_name} (<code>{cme.model_id}</code>)<br/>
                     <strong>Reason:</strong> {cme.message}<br/><br/>
-                    <em>Action: Check your Anthropic API Key account permissions or select an active model from the top selector.</em>
+                    <em>Action: Check your Anthropic API Key account permissions or select an active model from the sidebar.</em>
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -398,8 +409,10 @@ if prompt_input:
             error_placeholder.markdown(f"""
             <div class="claude-error-card">
                 <div class="claude-error-header">
-                    <span>⚠️ Unexpected Error</span>
-                    <span class="claude-error-code">500 ERROR</span>
+                    <div class="claude-error-title">
+                        <span>⚠️</span> Unexpected Error
+                    </div>
+                    <div class="claude-error-code">500 ERROR</div>
                 </div>
                 <div class="claude-error-body">
                     <strong>Model:</strong> {selected_model_name} (<code>{selected_model_id}</code>)<br/>

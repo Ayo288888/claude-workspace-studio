@@ -4,149 +4,119 @@ def apply_claude_styles():
     st.markdown(
         """
         <style>
-        /* Claude.ai Core Color Palette & Typography */
         @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600;700&display=swap');
-        
+
+        /* Global Reset & Claude Colors */
         :root {
             --claude-bg: #FAF9F5;
             --claude-sidebar: #F3F0E6;
             --claude-card: #FFFFFF;
             --claude-border: #E5E0D8;
+            --claude-border-hover: #D0C9BE;
             --claude-text: #2C2825;
             --claude-muted: #736E65;
             --claude-coral: #DA7756;
             --claude-coral-hover: #C85B38;
             --claude-coral-light: #FDF4F0;
-            --claude-badge-blue: #1D4ED8;
+            --claude-badge-blue: #2563EB;
             --claude-badge-bg: #EFF6FF;
+            --claude-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+            --claude-shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.06);
         }
 
-        /* App Background */
+        /* Base Application Layout */
         .stApp {
-            background-color: var(--claude-bg);
-            color: var(--claude-text);
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--claude-bg) !important;
+            color: var(--claude-text) !important;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+        }
+
+        /* Top Header & Chrome Cleaner */
+        header[data-testid="stHeader"] {
+            background: transparent !important;
+            border-bottom: none !important;
+        }
+        #MainMenu, footer, .stDeployButton {
+            display: none !important;
         }
 
         /* Sidebar Styling */
         section[data-testid="stSidebar"] {
             background-color: var(--claude-sidebar) !important;
             border-right: 1px solid var(--claude-border) !important;
+            padding-top: 1.5rem !important;
         }
 
-        section[data-testid="stSidebar"] div[data-testid="stVerticalBlock"] {
-            gap: 0.5rem;
+        section[data-testid="stSidebar"] hr {
+            border-color: var(--claude-border) !important;
+            margin: 1rem 0 !important;
         }
 
-        /* Claude.ai Hero Typography */
-        .claude-hero-container {
-            text-align: center;
-            max-width: 720px;
-            margin: 40px auto 25px auto;
+        /* Form Inputs & Selectboxes Everywhere */
+        div[data-baseweb="select"] > div {
+            background-color: var(--claude-card) !important;
+            border: 1px solid var(--claude-border) !important;
+            border-radius: 12px !important;
+            color: var(--claude-text) !important;
+            font-weight: 500 !important;
+            font-size: 0.9rem !important;
+            box-shadow: var(--claude-shadow) !important;
+            transition: all 0.2s ease !important;
         }
 
-        .claude-spark-icon {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 44px;
-            height: 44px;
-            border-radius: 12px;
-            background: var(--claude-coral-light);
-            color: var(--claude-coral);
-            font-size: 24px;
-            margin-bottom: 16px;
+        div[data-baseweb="select"] > div:hover {
+            border-color: var(--claude-border-hover) !important;
         }
 
-        .claude-hero-title {
-            font-family: 'Instrument Serif', Georgia, serif;
-            font-size: 2.75rem;
-            font-weight: 400;
-            color: var(--claude-text);
-            line-height: 1.15;
-            margin-bottom: 8px;
-            letter-spacing: -0.02em;
+        div[data-baseweb="popover"], div[data-baseweb="menu"], ul[role="listbox"] {
+            background-color: var(--claude-card) !important;
+            border: 1px solid var(--claude-border) !important;
+            border-radius: 12px !important;
+            box-shadow: var(--claude-shadow-lg) !important;
+            color: var(--claude-text) !important;
         }
 
-        .claude-hero-subtitle {
-            font-size: 1rem;
-            color: var(--claude-muted);
-            font-weight: 400;
+        li[role="option"] {
+            color: var(--claude-text) !important;
+            border-radius: 8px !important;
+            margin: 2px 4px !important;
         }
 
-        /* Quick Starter Cards (2x2 Grid) */
-        .starter-card-container {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-            max-width: 740px;
-            margin: 24px auto 30px auto;
+        li[role="option"]:hover, li[aria-selected="true"] {
+            background-color: var(--claude-coral-light) !important;
+            color: var(--claude-coral) !important;
         }
 
-        .starter-card {
-            background: var(--claude-card);
-            border: 1px solid var(--claude-border);
-            border-radius: 14px;
-            padding: 16px;
-            cursor: pointer;
-            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-            text-align: left;
+        /* Text Inputs */
+        div[data-baseweb="input"] > div {
+            background-color: var(--claude-card) !important;
+            border: 1px solid var(--claude-border) !important;
+            border-radius: 12px !important;
+            color: var(--claude-text) !important;
         }
 
-        .starter-card:hover {
-            border-color: var(--claude-coral);
-            box-shadow: 0 4px 16px rgba(218, 119, 86, 0.08);
-            transform: translateY(-1px);
-        }
-
-        .starter-card-title {
-            font-size: 0.95rem;
-            font-weight: 600;
-            color: var(--claude-text);
-            margin-bottom: 4px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .starter-card-desc {
-            font-size: 0.82rem;
-            color: var(--claude-muted);
-            line-height: 1.4;
-        }
-
-        /* Claude Input Container */
-        .claude-prompt-card {
-            background: var(--claude-card);
-            border: 1px solid var(--claude-border);
-            border-radius: 18px;
-            padding: 16px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
-            margin: 0 auto;
-            max-width: 760px;
-            transition: border-color 0.2s ease, box-shadow 0.2s ease;
-        }
-
-        .claude-prompt-card:focus-within {
-            border-color: var(--claude-coral);
-            box-shadow: 0 6px 24px rgba(218, 119, 86, 0.12);
+        input {
+            color: var(--claude-text) !important;
         }
 
         /* Buttons */
         .stButton > button {
-            border-radius: 10px;
-            border: 1px solid var(--claude-border);
-            background-color: var(--claude-card);
-            color: var(--claude-text);
-            font-weight: 500;
-            font-size: 0.9rem;
-            transition: all 0.2s ease;
+            border-radius: 12px !important;
+            border: 1px solid var(--claude-border) !important;
+            background-color: var(--claude-card) !important;
+            color: var(--claude-text) !important;
+            font-weight: 500 !important;
+            font-size: 0.9rem !important;
+            padding: 0.5rem 1rem !important;
+            box-shadow: var(--claude-shadow) !important;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
         }
 
         .stButton > button:hover {
-            border-color: var(--claude-coral);
-            color: var(--claude-coral);
-            background-color: var(--claude-coral-light);
+            border-color: var(--claude-coral) !important;
+            color: var(--claude-coral) !important;
+            background-color: var(--claude-coral-light) !important;
+            transform: translateY(-1px) !important;
         }
 
         .stButton > button[kind="primary"] {
@@ -158,88 +128,228 @@ def apply_claude_styles():
         .stButton > button[kind="primary"]:hover {
             background-color: var(--claude-coral-hover) !important;
             border-color: var(--claude-coral-hover) !important;
+            color: #FFFFFF !important;
         }
 
-        /* Model Badge Pill */
-        .model-pill-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            background: var(--claude-sidebar);
+        /* Hero Typography */
+        .claude-hero-wrapper {
+            text-align: center;
+            max-width: 760px;
+            margin: 2.5rem auto 1.5rem auto;
+            padding: 0 1rem;
+        }
+
+        .claude-sunburst {
+            font-size: 2.5rem;
+            line-height: 1;
+            margin-bottom: 0.75rem;
+            display: inline-block;
+            filter: drop-shadow(0 2px 8px rgba(218, 119, 86, 0.2));
+        }
+
+        .claude-title {
+            font-family: 'Instrument Serif', Georgia, serif;
+            font-size: 3rem;
+            font-weight: 400;
+            color: var(--claude-text);
+            line-height: 1.1;
+            letter-spacing: -0.02em;
+            margin-bottom: 0.5rem;
+        }
+
+        .claude-subtitle {
+            font-size: 1.05rem;
+            color: var(--claude-muted);
+            font-weight: 400;
+        }
+
+        /* Prompt Hero Box Container (Claude.ai Replica) */
+        .claude-center-box {
+            background: var(--claude-card);
             border: 1px solid var(--claude-border);
-            padding: 4px 10px;
             border-radius: 20px;
-            font-size: 0.8rem;
+            padding: 18px 20px 14px 20px;
+            box-shadow: var(--claude-shadow-lg);
+            max-width: 780px;
+            margin: 1.5rem auto;
+            transition: all 0.2s ease;
+        }
+
+        .claude-center-box:focus-within {
+            border-color: var(--claude-coral);
+            box-shadow: 0 8px 32px rgba(218, 119, 86, 0.12);
+        }
+
+        /* Starter Prompt Cards (2x2 Grid) */
+        .starter-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            max-width: 780px;
+            margin: 1.5rem auto 2.5rem auto;
+        }
+
+        .starter-card-btn {
+            background: var(--claude-card);
+            border: 1px solid var(--claude-border);
+            border-radius: 14px;
+            padding: 14px 16px;
+            text-align: left;
+            cursor: pointer;
+            box-shadow: var(--claude-shadow);
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .starter-card-btn:hover {
+            border-color: var(--claude-coral);
+            box-shadow: 0 4px 18px rgba(218, 119, 86, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .starter-card-title {
+            font-size: 0.95rem;
             font-weight: 600;
             color: var(--claude-text);
+            margin-bottom: 3px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
-        .new-badge {
-            background: var(--claude-badge-bg);
-            color: var(--claude-badge-blue);
+        .starter-card-desc {
+            font-size: 0.82rem;
+            color: var(--claude-muted);
+            line-height: 1.35;
+        }
+
+        /* Streamlit Bottom Chat Input */
+        div[data-testid="stChatInput"] {
+            background-color: transparent !important;
+        }
+
+        div[data-testid="stChatInput"] > div {
+            background-color: var(--claude-card) !important;
+            border: 1px solid var(--claude-border) !important;
+            border-radius: 18px !important;
+            box-shadow: var(--claude-shadow-lg) !important;
+            color: var(--claude-text) !important;
+        }
+
+        div[data-testid="stChatInput"] > div:focus-within {
+            border-color: var(--claude-coral) !important;
+            box-shadow: 0 6px 24px rgba(218, 119, 86, 0.14) !important;
+        }
+
+        div[data-testid="stChatInput"] textarea {
+            color: var(--claude-text) !important;
+            font-size: 0.95rem !important;
+        }
+
+        div[data-testid="stChatInput"] button {
+            color: var(--claude-coral) !important;
+        }
+
+        /* Chat Message Cards */
+        .stChatMessage {
+            background-color: transparent !important;
+            border-radius: 14px !important;
+            padding: 1rem 1.25rem !important;
+            margin-bottom: 0.75rem !important;
+        }
+
+        div[data-testid="stChatMessage"]:nth-child(even) {
+            background-color: var(--claude-card) !important;
+            border: 1px solid var(--claude-border) !important;
+            box-shadow: var(--claude-shadow) !important;
+        }
+
+        /* Expanders / Artifacts */
+        .streamlit-expanderHeader {
+            background-color: var(--claude-sidebar) !important;
+            border: 1px solid var(--claude-border) !important;
+            border-radius: 10px !important;
+            font-weight: 600 !important;
+            color: var(--claude-text) !important;
+        }
+
+        .streamlit-expanderContent {
+            background-color: var(--claude-card) !important;
+            border: 1px solid var(--claude-border) !important;
+            border-top: none !important;
+            border-bottom-left-radius: 10px !important;
+            border-bottom-right-radius: 10px !important;
+        }
+
+        /* Model Badge / Pill */
+        .new-pill {
+            background: #2563EB;
+            color: #FFFFFF;
             font-size: 0.65rem;
             font-weight: 700;
             padding: 2px 6px;
             border-radius: 6px;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.04em;
+            margin-left: 6px;
+            vertical-align: middle;
         }
 
         /* Front-End Error Diagnostic Card */
         .claude-error-card {
             background-color: #FEF2F2;
             border: 1px solid #FCA5A5;
-            border-left: 4px solid #EF4444;
-            border-radius: 12px;
-            padding: 16px;
+            border-left: 5px solid #EF4444;
+            border-radius: 14px;
+            padding: 18px 20px;
             margin: 16px 0;
-            color: #991B1B;
+            box-shadow: 0 4px 16px rgba(239, 68, 68, 0.08);
         }
 
         .claude-error-header {
             display: flex;
             align-items: center;
-            gap: 8px;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .claude-error-title {
             font-weight: 700;
-            font-size: 0.95rem;
-            margin-bottom: 6px;
+            font-size: 1rem;
+            color: #991B1B;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .claude-error-code {
             background: #FEE2E2;
             color: #B91C1C;
-            padding: 2px 8px;
-            border-radius: 6px;
+            padding: 3px 10px;
+            border-radius: 8px;
             font-size: 0.75rem;
             font-family: monospace;
             font-weight: 700;
+            border: 1px solid #FECACA;
         }
 
         .claude-error-body {
-            font-size: 0.88rem;
+            font-size: 0.9rem;
             color: #7F1D1D;
-            line-height: 1.5;
+            line-height: 1.55;
         }
 
-        /* Reasoning / Extended Thinking Panel */
+        /* Extended Thinking Monospace Panel */
         .thinking-panel {
             background: #F9F8F5;
             border: 1px solid var(--claude-border);
             border-radius: 10px;
-            padding: 12px;
+            padding: 14px;
             font-family: 'Consolas', 'Courier New', monospace;
-            font-size: 0.82rem;
+            font-size: 0.83rem;
             color: var(--claude-muted);
-            margin-bottom: 12px;
-            line-height: 1.5;
-            max-height: 300px;
+            line-height: 1.55;
+            max-height: 320px;
             overflow-y: auto;
         }
-
-        /* Hide Streamlit Default Header and Footer */
-        #MainMenu {visibility: hidden;}
-        footer {visibility: hidden;}
-        header[data-testid="stHeader"] {background: transparent;}
         </style>
         """,
         unsafe_allow_html=True

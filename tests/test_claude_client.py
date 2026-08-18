@@ -51,6 +51,8 @@ def main():
         self.assertIn("Sonnet 5", CLAUDE_MODELS)
         self.assertIn("Fable 5", CLAUDE_MODELS)
         self.assertGreaterEqual(len(CLAUDE_MODELS), 10)
+        self.assertIn("None (Default Claude)", SYSTEM_PRESETS)
+        self.assertEqual(SYSTEM_PRESETS["None (Default Claude)"], "")
 
     def test_effort_levels(self):
         self.assertIn("Low", EFFORT_LEVELS)

@@ -191,7 +191,15 @@ with st.sidebar:
         index=0,
         label_visibility="collapsed"
     )
-    system_prompt = SYSTEM_PRESETS[selected_preset]
+    if selected_preset == "Custom Instructions...":
+        custom_system_input = st.text_area(
+            "Custom Instructions",
+            placeholder="Type custom instructions for Claude...",
+            help="Define how Claude should respond in this session."
+        )
+        system_prompt = custom_system_input.strip() if custom_system_input else ""
+    else:
+        system_prompt = SYSTEM_PRESETS[selected_preset]
 
     st.divider()
 

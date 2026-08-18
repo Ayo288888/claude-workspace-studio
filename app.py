@@ -18,7 +18,7 @@ from claude_client import (
     calculate_cost,
     format_cost_badge
 )
-from file_processor import process_raw_file, format_file_for_prompt
+from file_processor import process_raw_file, build_anthropic_message_content
 from web_tools import get_web_context_for_prompt
 from styles import apply_claude_styles
 from security import SessionKeyManager, mask_api_key, validate_anthropic_key
@@ -139,7 +139,7 @@ with st.sidebar:
     st.markdown("""
     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; padding-bottom: 2px;">
         <div style="font-weight: 700; font-size: 1.35rem; color: #ECEAE4; letter-spacing: -0.02em;">Claude</div>
-        <div style="font-size: 0.72rem; color: #8E8A80; background: #222220; padding: 2px 8px; border-radius: 12px; border: 1px solid #2E2E2A;">Studio</div>
+        <div style="font-size: 0.72rem; color: #8E8A80; background: #20201D; padding: 2px 8px; border-radius: 8px; border: 1px solid #2D2D29;">Studio</div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -296,7 +296,7 @@ else:
 # Top Minimal Bar if chat is ongoing
 if has_messages:
     st.markdown(f"""
-    <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.86rem; color: #8E8A80; padding: 4px 0 10px 0; border-bottom: 1px solid #2E2E2A; margin-bottom: 16px;">
+    <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.86rem; color: #8E8A80; padding: 4px 0 10px 0; border-bottom: 1px solid #2D2D29; margin-bottom: 16px;">
         <div>
             <span style="font-weight: 600; color: #ECEAE4;">{st.session_state.selected_model_name}</span>
             <span> • </span>
@@ -329,14 +329,20 @@ for msg in messages:
             with st.expander("Extended Thinking Process", expanded=False):
                 st.markdown(f"<div class='thinking-panel'>{msg['thinking']}</div>", unsafe_allow_html=True)
         
-        st.markdown(msg["content"])
-        
-        # Display extracted artifacts
-        artifacts = extract_artifacts(msg["content"])
-        if artifacts:
-            for art in artifacts:
-                with st.expander(f"Artifact: {art['title']}", expanded=False):
-                    st.code(art["code"], language=art["language"])
+        # If content is string or multimodal
+        if isinstance(msg["content"], str):
+            st.markdown(msg["content"])
+            artifacts = extract_artifacts(msg["content"])
+            if artifacts:
+                for art in artifacts:
+                    with st.expander(f"Artifact: {art['title']}", expanded=False):
+                        st.code(art["code"], language=art["language"])
+        elif isinstance(msg["content"], list):
+            for block in msg["content"]:
+                if block.get("type") == "image":
+                    st.caption("[Attached Image]")
+                elif block.get("type") == "text":
+                    st.markdown(block.get("text", ""))
 
         # Display Workbench-style Cost and Token Badge for Assistant Messages
         if msg["role"] == "assistant":
@@ -348,28 +354,29 @@ for msg in messages:
                 st.markdown(f"<div class='cost-token-badge'>{cost_badge_str}</div>", unsafe_allow_html=True)
 
 # =========================================================================
-# UNIFIED INLINE CHAT CONTROLS (Toolbar situated with the chatbox)
+# BOTTOM CONTROLS & CHATBOX (Exact Replica of Uploaded Screenshots)
 # =========================================================================
 
 # Short model name for compact button display
-curr_model = st.session_state.selected_model_name
-short_model = curr_model.split("(")[0].strip()
+curr_model_display = st.session_state.selected_model_name.split("(")[0].strip()
 
-# Clean inline toolbar bar matching media_1787095695464.png
-col_attach, col_model_pop, col_web_status = st.columns([0.14, 0.46, 0.40])
+# Inline Button Row (Matching media_1787095922266.png & media_1787095935936.png)
+col_btn1, col_btn2, col_spacer = st.columns([0.16, 0.42, 0.42])
 
-with col_attach:
-    with st.popover("+ Attach", help="Attach code, markdown, documents or data"):
+with col_btn1:
+    with st.popover("+ Attach ⌄", help="Attach or paste images, code, PDFs, documents"):
+        st.markdown("<div style='font-size: 0.8rem; font-weight: 700; color: #8E8A80; text-transform: uppercase;'>Upload or Paste Files</div>", unsafe_allow_html=True)
         uploaded_files = st.file_uploader(
             "Upload files",
             accept_multiple_files=True,
-            type=["txt", "md", "py", "js", "ts", "json", "csv", "pdf", "docx", "png", "jpg", "jpeg"],
+            type=["png", "jpg", "jpeg", "webp", "gif", "txt", "md", "py", "js", "ts", "json", "csv", "pdf", "docx"],
             label_visibility="collapsed",
-            key="chatbox_file_uploader"
+            key="chatbox_file_uploader",
+            help="Drag and drop or paste files (images, PDFs, documents, code)"
         )
 
-with col_model_pop:
-    with st.popover(f"{short_model}  {st.session_state.selected_effort} ⌃", help="Switch Model & Reasoning Effort"):
+with col_btn2:
+    with st.popover(f"{curr_model_display} {st.session_state.selected_effort} ⌃ ⌄", help="Configure Model & Effort"):
         st.markdown("<div style='font-size: 0.8rem; font-weight: 700; color: #8E8A80; text-transform: uppercase;'>Model Selection</div>", unsafe_allow_html=True)
         selected_model_label = st.selectbox(
             "Model",
@@ -397,22 +404,17 @@ with col_model_pop:
         )
         st.session_state.selected_effort = selected_effort
 
-with col_web_status:
-    web_label = "🌐 Web Access Active" if st.session_state.web_search_active else "🔒 Offline Mode"
-    st.markdown(f"<div style='font-size: 0.78rem; color: #8E8A80; text-align: right; padding-top: 8px;'>{web_label}</div>", unsafe_allow_html=True)
-
-# Process Uploaded Files Context safely
-file_context_str = ""
+# Process Uploaded Files / Pasted Images Context safely
+processed_files_list = []
 if uploaded_files:
-    processed_files = []
     for f in uploaded_files:
         p = process_raw_file(f.name, f.read())
         if p:
-            processed_files.append(p)
-    if processed_files:
-        file_context_str = "\n\n" + format_file_for_prompt(processed_files)
-        file_names = ", ".join([f.name for f in uploaded_files])
-        st.markdown(f"<div style='font-size: 0.78rem; color: #8E8A80; margin: 4px 0 8px 0;'>Attached: <code>{file_names}</code></div>", unsafe_allow_html=True)
+            processed_files_list.append(p)
+            
+    if processed_files_list:
+        file_chips_html = "".join([f"<span class='attached-chip'>{f['name']}</span>" for f in processed_files_list])
+        st.markdown(f"<div style='margin-bottom: 8px;'>{file_chips_html}</div>", unsafe_allow_html=True)
 
 # Quick Starter Pill Tags beneath the chatbox on New Chat
 prefill_prompt = st.session_state.active_starter_prompt
@@ -440,10 +442,10 @@ if not has_messages:
             st.rerun()
 
 if prefill_prompt and not has_messages:
-    st.info(f"Starter Prompt: *{prefill_prompt}* (Type your topic below to send)")
+    st.info(f"Starter Prompt: *{prefill_prompt}* (Type your details below to send)")
 
-# The Main Chat Input Field (Bulletproof Submission)
-prompt_placeholder = "How can I help you today?" if not has_messages else "Reply to Claude..."
+# The Main Chat Input Field (Matches media_1787095935936.png)
+prompt_placeholder = "Ask anything, @ to mention, / for actions" if not has_messages else "Reply to Claude..."
 prompt_input = st.chat_input(prompt_placeholder)
 
 if prompt_input:
@@ -464,22 +466,28 @@ if prompt_input:
         with st.spinner("Checking live web & sources..."):
             web_context_str, web_sources = get_web_context_for_prompt(actual_query, web_search_enabled=True)
         
-    full_prompt = actual_query + file_context_str + web_context_str
+    # Build exact Claude multimodal vision + text payload
+    full_message_payload = build_anthropic_message_content(
+        prompt_text=actual_query,
+        processed_files=processed_files_list,
+        web_context=web_context_str
+    )
     
     # Save user message to database
-    db.save_message(st.session_state.current_session_id, "user", full_prompt)
+    db.save_message(st.session_state.current_session_id, "user", actual_query if isinstance(full_message_payload, list) else full_message_payload)
     
     with st.chat_message("user"):
         st.markdown(actual_query)
-        if file_context_str and uploaded_files:
-            st.caption(f"Attached {len(uploaded_files)} file(s)")
+        if processed_files_list:
+            st.caption(f"Attached {len(processed_files_list)} file(s) / image(s)")
         if web_sources:
             st.caption(f"Web Sources Referenced: {', '.join(web_sources[:2])}")
 
-    # Prepare chat history for API
+    # Prepare chat history for API (including current multimodal message)
     history_messages = []
-    for m in db.get_messages(st.session_state.current_session_id):
+    for m in db.get_messages(st.session_state.current_session_id)[:-1]:
         history_messages.append({"role": m["role"], "content": m["content"]})
+    history_messages.append({"role": "user", "content": full_message_payload})
 
     # Assistant Response Generation
     with st.chat_message("assistant"):

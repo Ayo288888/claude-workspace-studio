@@ -1,5 +1,5 @@
 import unittest
-from file_processor import process_raw_file, format_file_for_prompt
+from file_processor import process_raw_file, format_file_for_prompt, build_anthropic_message_content
 
 class TestClaudeFileProcessor(unittest.TestCase):
     def test_process_text_file(self):
@@ -17,7 +17,7 @@ class TestClaudeFileProcessor(unittest.TestCase):
         self.assertIn("File: sample.md", formatted_single)
         self.assertIn("# Overview", formatted_single)
 
-        # Test List of Dicts (the previous crash case)
+        # Test List of Dicts
         file_list = [
             {"type": "text", "name": "file1.py", "content": "print('1')"},
             {"type": "text", "name": "file2.py", "content": "print('2')"},
@@ -27,6 +27,23 @@ class TestClaudeFileProcessor(unittest.TestCase):
         self.assertIn("File: file1.py", formatted_list)
         self.assertIn("File: file2.py", formatted_list)
         self.assertIn("[Attached Image: diagram.png]", formatted_list)
+
+    def test_build_anthropic_message_content_multimodal(self):
+        # Image attachment should produce Anthropic vision content block
+        img_file = {
+            "type": "image",
+            "name": "screenshot.png",
+            "media_type": "image/png",
+            "base64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+            "content": "[Image: screenshot.png]"
+        }
+        blocks = build_anthropic_message_content("Describe this image", [img_file])
+        self.assertIsInstance(blocks, list)
+        self.assertEqual(len(blocks), 2)
+        self.assertEqual(blocks[0]["type"], "image")
+        self.assertEqual(blocks[0]["source"]["type"], "base64")
+        self.assertEqual(blocks[1]["type"], "text")
+        self.assertEqual(blocks[1]["text"], "Describe this image")
 
 if __name__ == "__main__":
     unittest.main()

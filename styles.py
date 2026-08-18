@@ -10,20 +10,22 @@ def apply_claude_styles():
         :root {
             --claude-bg: #181816;
             --claude-sidebar: #131311;
-            --claude-card: #222220;
-            --claude-card-hover: #292926;
-            --claude-border: #2E2E2A;
+            --claude-card: #20201D;
+            --claude-card-hover: #282824;
+            --claude-border: #2D2D29;
             --claude-border-hover: #3E3E38;
+            --claude-btn-bg: #1E1E1C;
+            --claude-btn-border: #383834;
             --claude-text: #ECEAE4;
             --claude-muted: #8E8A80;
             --claude-coral: #DA7756;
             --claude-coral-hover: #E08567;
-            --claude-coral-dim: rgba(218, 119, 86, 0.15);
+            --claude-blue-btn: #0284C7;
             --claude-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
             --claude-shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.4);
         }
 
-        /* Base Application */
+        /* Base Application Layout */
         .stApp {
             background-color: var(--claude-bg) !important;
             color: var(--claude-text) !important;
@@ -64,7 +66,7 @@ def apply_claude_styles():
         div[data-baseweb="select"] > div {
             background-color: var(--claude-card) !important;
             border: 1px solid var(--claude-border) !important;
-            border-radius: 10px !important;
+            border-radius: 8px !important;
             color: var(--claude-text) !important;
             font-weight: 500 !important;
             font-size: 0.88rem !important;
@@ -91,14 +93,14 @@ def apply_claude_styles():
         }
 
         li[role="option"]:hover, li[aria-selected="true"] {
-            background-color: var(--claude-coral-dim) !important;
+            background-color: rgba(218, 119, 86, 0.15) !important;
             color: var(--claude-coral) !important;
         }
 
         div[data-baseweb="input"] > div, div[data-baseweb="textarea"] > div {
             background-color: var(--claude-card) !important;
             border: 1px solid var(--claude-border) !important;
-            border-radius: 10px !important;
+            border-radius: 8px !important;
             color: var(--claude-text) !important;
         }
 
@@ -108,21 +110,20 @@ def apply_claude_styles():
 
         /* Standard Buttons */
         .stButton > button {
-            border-radius: 10px !important;
-            border: 1px solid var(--claude-border) !important;
-            background-color: var(--claude-card) !important;
+            border-radius: 8px !important;
+            border: 1px solid var(--claude-btn-border) !important;
+            background-color: var(--claude-btn-bg) !important;
             color: var(--claude-text) !important;
             font-weight: 500 !important;
-            font-size: 0.88rem !important;
-            padding: 0.45rem 0.9rem !important;
-            box-shadow: var(--claude-shadow) !important;
+            font-size: 0.86rem !important;
+            padding: 0.4rem 0.85rem !important;
             transition: all 0.15s ease !important;
         }
 
         .stButton > button:hover {
             border-color: var(--claude-border-hover) !important;
             background-color: var(--claude-card-hover) !important;
-            color: var(--claude-text) !important;
+            color: #FFFFFF !important;
         }
 
         .stButton > button[kind="primary"] {
@@ -136,12 +137,26 @@ def apply_claude_styles():
             border-color: var(--claude-coral-hover) !important;
         }
 
-        /* + New Chat Pill Button */
-        .new-chat-btn button {
-            border-radius: 20px !important;
-            font-weight: 600 !important;
-            text-align: left !important;
-            padding: 0.5rem 1rem !important;
+        /* Popover Trigger Buttons (Exact Replica of Screenshot) */
+        div[data-testid="stPopover"] > button {
+            background-color: var(--claude-btn-bg) !important;
+            border: 1px solid var(--claude-btn-border) !important;
+            border-radius: 8px !important;
+            color: var(--claude-text) !important;
+            font-size: 0.84rem !important;
+            font-weight: 500 !important;
+            padding: 0.4rem 0.85rem !important;
+            box-shadow: none !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 6px !important;
+            transition: all 0.15s ease !important;
+        }
+
+        div[data-testid="stPopover"] > button:hover {
+            background-color: var(--claude-card-hover) !important;
+            border-color: #4E4E48 !important;
+            color: #FFFFFF !important;
         }
 
         /* Hero Typography */
@@ -170,49 +185,6 @@ def apply_claude_styles():
             line-height: 1;
             font-family: 'Inter', sans-serif;
             font-weight: 300;
-        }
-
-        /* Unified Chatbox Container */
-        .claude-chatbox-card {
-            background-color: var(--claude-card);
-            border: 1px solid var(--claude-border);
-            border-radius: 18px;
-            padding: 14px 18px 10px 18px;
-            box-shadow: var(--claude-shadow-lg);
-            margin: 1.5rem auto;
-            max-width: 820px;
-            transition: border-color 0.2s ease;
-        }
-
-        .claude-chatbox-card:focus-within {
-            border-color: var(--claude-border-hover);
-        }
-
-        /* Bottom Toolbar inside Chatbox */
-        .chatbox-toolbar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-top: 10px;
-            padding-top: 8px;
-            border-top: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        .toolbar-left, .toolbar-right {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        /* Quick Starter Pill Row */
-        .starter-pills-row {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            max-width: 820px;
-            margin: 0.8rem auto 2.5rem auto;
         }
 
         /* Chat Message Cards */
@@ -300,22 +272,19 @@ def apply_claude_styles():
             color: var(--claude-muted);
         }
 
-        /* Expanders / Artifacts */
-        .streamlit-expanderHeader {
-            background-color: var(--claude-card) !important;
-            border: 1px solid var(--claude-border) !important;
-            border-radius: 10px !important;
-            font-weight: 600 !important;
-            color: var(--claude-text) !important;
-            font-size: 0.88rem !important;
-        }
-
-        .streamlit-expanderContent {
-            background-color: #1A1A18 !important;
-            border: 1px solid var(--claude-border) !important;
-            border-top: none !important;
-            border-bottom-left-radius: 10px !important;
-            border-bottom-right-radius: 10px !important;
+        /* Attached File Thumbnail / Chip */
+        .attached-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background-color: var(--claude-btn-bg);
+            border: 1px solid var(--claude-btn-border);
+            border-radius: 8px;
+            padding: 4px 10px;
+            font-size: 0.78rem;
+            color: var(--claude-text);
+            margin-right: 6px;
+            margin-bottom: 6px;
         }
 
         /* Streamlit Bottom Chat Input Integration */
@@ -326,13 +295,14 @@ def apply_claude_styles():
         div[data-testid="stChatInput"] > div {
             background-color: var(--claude-card) !important;
             border: 1px solid var(--claude-border) !important;
-            border-radius: 18px !important;
+            border-radius: 16px !important;
             box-shadow: var(--claude-shadow-lg) !important;
             color: var(--claude-text) !important;
+            padding: 4px 6px !important;
         }
 
         div[data-testid="stChatInput"] > div:focus-within {
-            border-color: var(--claude-border-hover) !important;
+            border-color: #4A4A44 !important;
         }
 
         div[data-testid="stChatInput"] textarea {
@@ -342,19 +312,6 @@ def apply_claude_styles():
 
         div[data-testid="stChatInput"] button {
             color: var(--claude-coral) !important;
-        }
-
-        /* New Model Pill */
-        .new-pill {
-            background: #2563EB;
-            color: #FFFFFF;
-            font-size: 0.65rem;
-            font-weight: 700;
-            padding: 2px 6px;
-            border-radius: 6px;
-            letter-spacing: 0.04em;
-            margin-left: 6px;
-            vertical-align: middle;
         }
 
         /* Error Diagnostic Card */

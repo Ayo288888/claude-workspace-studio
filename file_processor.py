@@ -32,8 +32,8 @@ def process_raw_file(filename: str, file_bytes: bytes) -> Dict[str, Any]:
     ext = os.path.splitext(filename)[1].lower()
     mime = get_mime_type(filename)
 
-    # Handle Images (for Claude Vision API)
-    if ext in [".png", ".jpg", ".jpeg", ".webp", ".gif"]:
+    # Handle Images (for Claude Vision API & Pasted Images)
+    if ext in [".png", ".jpg", ".jpeg", ".webp", ".gif"] or mime.startswith("image/"):
         b64 = base64.b64encode(file_bytes).decode("utf-8")
         return {
             "type": "image",
@@ -93,7 +93,7 @@ def process_raw_file(filename: str, file_bytes: bytes) -> Dict[str, Any]:
 
 def format_file_for_prompt(files: Union[Dict[str, Any], List[Dict[str, Any]]]) -> str:
     """
-    Safely formats a single processed file or a list of processed files into a clean prompt context block.
+    Safely formats a single processed file or a list of processed files into a clean prompt context string.
     """
     if not files:
         return ""
@@ -116,3 +116,54 @@ def format_file_for_prompt(files: Union[Dict[str, Any], List[Dict[str, Any]]]) -
             formatted_blocks.append(f"```\n--- File: {fname} ---\n{content}\n```")
 
     return "\n\n".join(formatted_blocks)
+
+def build_anthropic_message_content(
+    prompt_text: str,
+    processed_files: List[Dict[str, Any]],
+    web_context: str = ""
+) -> Union[str, List[Dict[str, Any]]]:
+    """
+    Constructs the exact Claude Messages API content payload,
+    seamlessly supporting Multimodal Vision (pasted/uploaded images) + Text files.
+    """
+    has_images = any(f.get("type") == "image" for f in processed_files)
+    
+    if not has_images:
+        text_context = format_file_for_prompt(processed_files)
+        full = prompt_text
+        if text_context:
+            full = full + "\n\n" + text_context
+        if web_context:
+            full = full + "\n\n" + web_context
+        return full
+
+    # Multimodal Vision Content Blocks
+    blocks: List[Dict[str, Any]] = []
+    
+    # 1. Attach image blocks
+    for f in processed_files:
+        if f.get("type") == "image" and f.get("base64"):
+            blocks.append({
+                "type": "image",
+                "source": {
+                    "type": "base64",
+                    "media_type": f.get("media_type", "image/png"),
+                    "data": f.get("base64")
+                }
+            })
+        elif f.get("type") == "text":
+            blocks.append({
+                "type": "text",
+                "text": f"--- Attached File: {f.get('name')} ---\n{f.get('content')}"
+            })
+
+    # 2. Main text query + web context
+    user_query = prompt_text
+    if web_context:
+        user_query += f"\n\n{web_context}"
+    blocks.append({
+        "type": "text",
+        "text": user_query
+    })
+    
+    return blocks

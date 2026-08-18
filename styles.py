@@ -124,6 +124,21 @@ def apply_claude_styles():
             line-height: 1.35;
         }
 
+        /* Workbench Token Cost Badge */
+        .cost-token-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background-color: var(--claude-sidebar);
+            border: 1px solid var(--claude-border);
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 0.76rem;
+            font-family: 'Consolas', 'Courier New', monospace;
+            color: var(--claude-muted);
+            margin-top: 8px;
+        }
+
         /* Buttons */
         .stButton > button {
             border-radius: 12px !important;

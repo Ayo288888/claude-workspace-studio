@@ -37,10 +37,19 @@ class Database:
                     content TEXT NOT NULL,
                     thinking TEXT DEFAULT '',
                     tokens INTEGER DEFAULT 0,
+                    input_tokens INTEGER DEFAULT 0,
+                    output_tokens INTEGER DEFAULT 0,
+                    cost REAL DEFAULT 0.0,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY(session_id) REFERENCES sessions(id) ON DELETE CASCADE
                 )
             """)
+            # Ensure columns exist for upgraded schemas
+            for col, col_type in [("input_tokens", "INTEGER DEFAULT 0"), ("output_tokens", "INTEGER DEFAULT 0"), ("cost", "REAL DEFAULT 0.0")]:
+                try:
+                    conn.execute(f"ALTER TABLE messages ADD COLUMN {col} {col_type}")
+                except Exception:
+                    pass
             conn.commit()
 
     def create_session(self, title: str = "New Conversation", model: str = "claude-3-7-sonnet-20250219", system_prompt: str = "") -> str:
@@ -65,13 +74,23 @@ class Database:
             row = cur.fetchone()
             return dict(row) if row else None
 
-    def save_message(self, session_id: str, role: str, content: str, thinking: str = "", tokens: int = 0) -> str:
+    def save_message(
+        self,
+        session_id: str,
+        role: str,
+        content: str,
+        thinking: str = "",
+        tokens: int = 0,
+        input_tokens: int = 0,
+        output_tokens: int = 0,
+        cost: float = 0.0
+    ) -> str:
         msg_id = str(uuid.uuid4())
         now = datetime.now(timezone.utc).isoformat()
         with self._get_conn() as conn:
             conn.execute(
-                "INSERT INTO messages (id, session_id, role, content, thinking, tokens, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (msg_id, session_id, role, content, thinking, tokens, now)
+                "INSERT INTO messages (id, session_id, role, content, thinking, tokens, input_tokens, output_tokens, cost, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (msg_id, session_id, role, content, thinking, tokens, input_tokens, output_tokens, cost, now)
             )
             conn.execute("UPDATE sessions SET updated_at = ? WHERE id = ?", (now, session_id))
             conn.commit()

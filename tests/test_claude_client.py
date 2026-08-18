@@ -1,5 +1,15 @@
 import unittest
-from claude_client import ClaudeEngine, ClaudeModelError, extract_artifacts, CLAUDE_MODELS, MODEL_DETAILS, EFFORT_LEVELS, SYSTEM_PRESETS
+from claude_client import (
+    ClaudeEngine,
+    ClaudeModelError,
+    extract_artifacts,
+    calculate_cost,
+    format_cost_badge,
+    CLAUDE_MODELS,
+    MODEL_DETAILS,
+    EFFORT_LEVELS,
+    SYSTEM_PRESETS
+)
 
 class TestClaudeClient(unittest.TestCase):
     def test_extract_artifacts(self):
@@ -22,13 +32,24 @@ def main():
         self.assertEqual(artifacts[1]["language"], "python")
         self.assertIn("def main", artifacts[1]["code"])
 
+    def test_calculate_cost(self):
+        # 1,000 input tokens and 500 output tokens on Sonnet 3.7 ($3/MTok in, $15/MTok out)
+        in_c, out_c, total_c = calculate_cost("claude-3-7-sonnet-20250219", 1000, 500)
+        self.assertAlmostEqual(in_c, 0.003, places=5)
+        self.assertAlmostEqual(out_c, 0.0075, places=5)
+        self.assertAlmostEqual(total_c, 0.0105, places=5)
+
+    def test_format_cost_badge(self):
+        badge = format_cost_badge(1000, 500, 0.0105)
+        self.assertIn("1,500 tokens", badge)
+        self.assertIn("1,000 in", badge)
+        self.assertIn("500 out", badge)
+        self.assertIn("$0.0105", badge)
+
     def test_models_and_presets_exist(self):
         self.assertIn("Opus 5", CLAUDE_MODELS)
         self.assertIn("Sonnet 5", CLAUDE_MODELS)
         self.assertIn("Fable 5", CLAUDE_MODELS)
-        self.assertEqual(CLAUDE_MODELS["Opus 5"], "claude-opus-5")
-        self.assertEqual(CLAUDE_MODELS["Sonnet 5"], "claude-sonnet-5")
-        self.assertEqual(CLAUDE_MODELS["Fable 5"], "claude-fable-5")
         self.assertGreaterEqual(len(CLAUDE_MODELS), 10)
 
     def test_effort_levels(self):

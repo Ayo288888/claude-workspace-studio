@@ -7,7 +7,17 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from storage import Database
-from claude_client import ClaudeEngine, ClaudeModelError, CLAUDE_MODELS, MODEL_DETAILS, EFFORT_LEVELS, SYSTEM_PRESETS, extract_artifacts
+from claude_client import (
+    ClaudeEngine,
+    ClaudeModelError,
+    CLAUDE_MODELS,
+    MODEL_DETAILS,
+    EFFORT_LEVELS,
+    SYSTEM_PRESETS,
+    extract_artifacts,
+    calculate_cost,
+    format_cost_badge
+)
 from file_processor import process_raw_file, format_file_for_prompt
 from styles import apply_claude_styles
 from security import SessionKeyManager, mask_api_key, validate_anthropic_key
@@ -96,13 +106,11 @@ if current_key and not st.session_state.live_models_cache:
 
 # Build Model Choices
 model_choices = {}
-# Add live models from Console if available
 if st.session_state.live_models_cache:
     for lm in st.session_state.live_models_cache:
         label = f"{lm['display_name']} ({lm['id']})"
         model_choices[label] = lm['id']
 
-# Add known default models
 for k, v in CLAUDE_MODELS.items():
     if k not in model_choices:
         model_choices[k] = v
@@ -355,6 +363,15 @@ for msg in messages:
                 with st.expander(f"📦 {art['title']}", expanded=False):
                     st.code(art["code"], language=art["language"])
 
+        # Display Workbench-style Cost and Token Badge for Assistant Messages
+        if msg["role"] == "assistant":
+            in_t = msg.get("input_tokens", 0)
+            out_t = msg.get("output_tokens", msg.get("tokens", 0))
+            cost_val = msg.get("cost", 0.0)
+            if in_t > 0 or out_t > 0 or cost_val > 0:
+                cost_badge_str = format_cost_badge(in_t, out_t, cost_val)
+                st.markdown(f"<div class='cost-token-badge'>{cost_badge_str}</div>", unsafe_allow_html=True)
+
 # INPUT HANDLING
 prefill_prompt = st.session_state.active_starter_prompt
 if prefill_prompt and not has_messages:
@@ -394,10 +411,12 @@ if prompt_input:
     with st.chat_message("assistant", avatar="✨"):
         thinking_placeholder = st.empty()
         response_placeholder = st.empty()
+        cost_placeholder = st.empty()
         error_placeholder = st.empty()
         
         full_text = ""
         full_thinking = ""
+        final_usage = {"input_tokens": 0, "output_tokens": 0, "cost": 0.0}
         
         try:
             engine = ClaudeEngine(api_key=current_key)
@@ -420,16 +439,23 @@ if prompt_input:
                     elif chunk["type"] == "text":
                         full_text += chunk["delta"]
                         response_placeholder.markdown(full_text + "▌")
+                    elif chunk["type"] == "usage_summary":
+                        final_usage = chunk
+                        cost_placeholder.markdown(f"<div class='cost-token-badge'>{chunk['badge']}</div>", unsafe_allow_html=True)
                         
             # Final output render without cursor
             response_placeholder.markdown(full_text)
             
-            # Save assistant response to DB
+            # Save assistant response with exact tokens & cost to DB
             db.save_message(
                 session_id=st.session_state.current_session_id,
                 role="assistant",
                 content=full_text,
-                thinking=full_thinking
+                thinking=full_thinking,
+                tokens=final_usage["output_tokens"],
+                input_tokens=final_usage["input_tokens"],
+                output_tokens=final_usage["output_tokens"],
+                cost=final_usage["cost"]
             )
             
             # Auto-title conversation on first turn

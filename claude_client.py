@@ -1,6 +1,6 @@
 import os
 import re
-from typing import Any, Dict, Generator, List, Optional
+from typing import Any, Dict, Generator, List, Optional, Tuple
 
 # Custom structured error class for front-end rendering
 class ClaudeModelError(Exception):
@@ -19,6 +19,8 @@ DEFAULT_CLAUDE_MODELS: Dict[str, Dict[str, Any]] = {
         "badge": "Recommended",
         "tagline": "Hybrid reasoning, coding & architecture",
         "pricing": "Input $3/MTok • Output $15/MTok",
+        "input_rate": 3.0,
+        "output_rate": 15.0,
         "supports_thinking": True,
     },
     "Claude 3.5 Sonnet": {
@@ -26,6 +28,8 @@ DEFAULT_CLAUDE_MODELS: Dict[str, Dict[str, Any]] = {
         "badge": None,
         "tagline": "Industry-leading intelligence and speed",
         "pricing": "Input $3/MTok • Output $15/MTok",
+        "input_rate": 3.0,
+        "output_rate": 15.0,
         "supports_thinking": False,
     },
     "Claude 3.5 Haiku": {
@@ -33,6 +37,8 @@ DEFAULT_CLAUDE_MODELS: Dict[str, Dict[str, Any]] = {
         "badge": None,
         "tagline": "Lightning-fast low latency responses",
         "pricing": "Input $0.80/MTok • Output $4/MTok",
+        "input_rate": 0.80,
+        "output_rate": 4.0,
         "supports_thinking": False,
     },
     "Claude 3 Opus": {
@@ -40,6 +46,8 @@ DEFAULT_CLAUDE_MODELS: Dict[str, Dict[str, Any]] = {
         "badge": None,
         "tagline": "Deep writing, synthesis & analysis",
         "pricing": "Input $15/MTok • Output $75/MTok",
+        "input_rate": 15.0,
+        "output_rate": 75.0,
         "supports_thinking": False,
     },
     "Opus 5": {
@@ -47,6 +55,8 @@ DEFAULT_CLAUDE_MODELS: Dict[str, Dict[str, Any]] = {
         "badge": "New",
         "tagline": "Flagship model for the hardest problems",
         "pricing": "Input $10/MTok • Output $50/MTok",
+        "input_rate": 10.0,
+        "output_rate": 50.0,
         "supports_thinking": True,
     },
     "Sonnet 5": {
@@ -54,6 +64,8 @@ DEFAULT_CLAUDE_MODELS: Dict[str, Dict[str, Any]] = {
         "badge": None,
         "tagline": "Balanced speed, cost, and intelligence",
         "pricing": "Input $2/MTok • Output $10/MTok",
+        "input_rate": 2.0,
+        "output_rate": 10.0,
         "supports_thinking": True,
     },
     "Fable 5": {
@@ -61,6 +73,8 @@ DEFAULT_CLAUDE_MODELS: Dict[str, Dict[str, Any]] = {
         "badge": None,
         "tagline": "Powerful model for complex work & creative narrative",
         "pricing": "Input $5/MTok • Output $25/MTok",
+        "input_rate": 5.0,
+        "output_rate": 25.0,
         "supports_thinking": True,
     },
     "Opus 4.8": {
@@ -68,6 +82,8 @@ DEFAULT_CLAUDE_MODELS: Dict[str, Dict[str, Any]] = {
         "badge": None,
         "tagline": "Deep reasoning & multi-step execution",
         "pricing": "Input $10/MTok • Output $50/MTok",
+        "input_rate": 10.0,
+        "output_rate": 50.0,
         "supports_thinking": True,
     },
     "Opus 4.7": {
@@ -75,6 +91,8 @@ DEFAULT_CLAUDE_MODELS: Dict[str, Dict[str, Any]] = {
         "badge": None,
         "tagline": "High-depth analytical processing",
         "pricing": "Input $10/MTok • Output $50/MTok",
+        "input_rate": 10.0,
+        "output_rate": 50.0,
         "supports_thinking": True,
     },
     "Sonnet 4.6": {
@@ -82,6 +100,8 @@ DEFAULT_CLAUDE_MODELS: Dict[str, Dict[str, Any]] = {
         "badge": None,
         "tagline": "Fast code generation & synthesis",
         "pricing": "Input $3/MTok • Output $15/MTok",
+        "input_rate": 3.0,
+        "output_rate": 15.0,
         "supports_thinking": True,
     },
     "Opus 4.6": {
@@ -89,6 +109,8 @@ DEFAULT_CLAUDE_MODELS: Dict[str, Dict[str, Any]] = {
         "badge": None,
         "tagline": "Complex problem solving",
         "pricing": "Input $10/MTok • Output $50/MTok",
+        "input_rate": 10.0,
+        "output_rate": 50.0,
         "supports_thinking": True,
     },
     "Opus 4.5": {
@@ -96,6 +118,8 @@ DEFAULT_CLAUDE_MODELS: Dict[str, Dict[str, Any]] = {
         "badge": None,
         "tagline": "High intelligence reasoning engine",
         "pricing": "Input $10/MTok • Output $50/MTok",
+        "input_rate": 10.0,
+        "output_rate": 50.0,
         "supports_thinking": True,
     },
     "Haiku 4.5": {
@@ -103,6 +127,8 @@ DEFAULT_CLAUDE_MODELS: Dict[str, Dict[str, Any]] = {
         "badge": None,
         "tagline": "Ultra low-latency responses",
         "pricing": "Input $0.25/MTok • Output $1.25/MTok",
+        "input_rate": 0.25,
+        "output_rate": 1.25,
         "supports_thinking": False,
     },
     "Sonnet 4.5": {
@@ -110,6 +136,8 @@ DEFAULT_CLAUDE_MODELS: Dict[str, Dict[str, Any]] = {
         "badge": None,
         "tagline": "High performance coding & analysis",
         "pricing": "Input $3/MTok • Output $15/MTok",
+        "input_rate": 3.0,
+        "output_rate": 15.0,
         "supports_thinking": True,
     },
 }
@@ -142,6 +170,34 @@ SYSTEM_PRESETS = {
     "Senior Code & Security Reviewer": "You are an elite Senior Staff Engineer and Security Auditor. Thoroughly inspect code for bugs, edge cases, vulnerabilities (OWASP), performance bottlenecks, and maintainability. Provide specific diffs, explanations, and refactored examples.",
     "Document & Policy Analyst": "You are a Lead Policy & Document Compliance Analyst. Synthesize complex documents, extract key obligations, identify risks, and produce clear executive summaries with structured tables and actionable bullet points.",
 }
+
+def calculate_cost(model_id: str, input_tokens: int, output_tokens: int) -> Tuple[float, float, float]:
+    """
+    Computes (input_cost, output_cost, total_cost) for a message based on exact model rates.
+    """
+    input_rate = 3.0
+    output_rate = 15.0
+    
+    clean_id = model_id.lower()
+    for name, details in DEFAULT_CLAUDE_MODELS.items():
+        if details["id"].lower() in clean_id or clean_id in details["id"].lower():
+            input_rate = details.get("input_rate", 3.0)
+            output_rate = details.get("output_rate", 15.0)
+            break
+            
+    input_cost = (input_tokens * input_rate) / 1_000_000.0
+    output_cost = (output_tokens * output_rate) / 1_000_000.0
+    total_cost = input_cost + output_cost
+    return round(input_cost, 6), round(output_cost, 6), round(total_cost, 6)
+
+def format_cost_badge(input_tokens: int, output_tokens: int, cost: float) -> str:
+    """Formats Workbench-style token and cost display string."""
+    total_tokens = input_tokens + output_tokens
+    if cost < 0.0001 and cost > 0:
+        cost_str = "<$0.0001"
+    else:
+        cost_str = f"${cost:.4f}"
+    return f"⚡ {total_tokens:,} tokens ({input_tokens:,} in, {output_tokens:,} out) • {cost_str}"
 
 def extract_artifacts(text: str) -> List[Dict[str, str]]:
     """Extract code blocks, plans, and documents as inspectable artifacts."""
@@ -219,8 +275,7 @@ class ClaudeEngine:
         temperature: float = 1.0,
     ) -> Generator[Dict[str, Any], None, None]:
         """
-        Streams response from Claude using Anthropic Messages API.
-        Validates messages and configures thinking parameters correctly.
+        Streams response from Claude and computes token usage & costs.
         """
         if not self.client:
             raise ClaudeModelError(
@@ -231,7 +286,7 @@ class ClaudeEngine:
                 message="Anthropic Python SDK is not installed in the current environment."
             )
 
-        # Clean messages history (ensure valid role and non-empty content)
+        # Clean messages history
         clean_messages = []
         for m in messages:
             role = m.get("role")
@@ -251,7 +306,6 @@ class ClaudeEngine:
         effort_config = EFFORT_LEVELS.get(effort_level, EFFORT_LEVELS["Medium"])
         budget = effort_config["budget"]
 
-        # Determine thinking support
         model_meta = MODEL_DETAILS.get(model_name, {})
         supports_thinking = model_meta.get("supports_thinking", False) or "3-7" in model_id or "opus-4" in model_id or "5" in model_id
 
@@ -266,7 +320,6 @@ class ClaudeEngine:
         if system and system.strip():
             kwargs["system"] = system.strip()
 
-        # Configure Thinking only if model supports it
         if supports_thinking and budget > 0:
             kwargs["thinking"] = {
                 "type": "enabled",
@@ -276,10 +329,16 @@ class ClaudeEngine:
         else:
             kwargs["temperature"] = temperature
 
+        input_tokens = 0
+        output_tokens = 0
+
         try:
             with self.client.messages.stream(**kwargs) as stream:
                 for event in stream:
-                    if event.type == "content_block_delta":
+                    if event.type == "message_start":
+                        if hasattr(event, "message") and hasattr(event.message, "usage"):
+                            input_tokens = getattr(event.message.usage, "input_tokens", 0)
+                    elif event.type == "content_block_delta":
                         delta = event.delta
                         if delta.type == "thinking_delta":
                             yield {"type": "thinking", "delta": delta.thinking}
@@ -287,10 +346,27 @@ class ClaudeEngine:
                             yield {"type": "text", "delta": delta.text}
                     elif event.type == "message_delta":
                         if hasattr(event, "usage") and event.usage:
-                            yield {
-                                "type": "usage",
-                                "output_tokens": getattr(event.usage, "output_tokens", 0)
-                            }
+                            output_tokens = getattr(event.usage, "output_tokens", output_tokens)
+
+                # Get final usage stats
+                try:
+                    final_msg = stream.get_final_message()
+                    if hasattr(final_msg, "usage"):
+                        input_tokens = getattr(final_msg.usage, "input_tokens", input_tokens)
+                        output_tokens = getattr(final_msg.usage, "output_tokens", output_tokens)
+                except Exception:
+                    pass
+
+                in_c, out_c, total_c = calculate_cost(model_id, input_tokens, output_tokens)
+                yield {
+                    "type": "usage_summary",
+                    "input_tokens": input_tokens,
+                    "output_tokens": output_tokens,
+                    "total_tokens": input_tokens + output_tokens,
+                    "cost": total_c,
+                    "badge": format_cost_badge(input_tokens, output_tokens, total_c)
+                }
+
         except self._anthropic.NotFoundError as e:
             raise ClaudeModelError(
                 model_name=model_name,
@@ -324,7 +400,6 @@ class ClaudeEngine:
                 message=f"Access to model '{model_id}' is restricted or requires an upgraded account tier: {str(e)}"
             )
         except self._anthropic.BadRequestError as e:
-            # If thinking was rejected on this model, retry cleanly without thinking parameter
             if "thinking" in str(e).lower() and "thinking" in kwargs:
                 del kwargs["thinking"]
                 kwargs["temperature"] = temperature
@@ -332,10 +407,34 @@ class ClaudeEngine:
                 try:
                     with self.client.messages.stream(**kwargs) as retry_stream:
                         for event in retry_stream:
-                            if event.type == "content_block_delta":
+                            if event.type == "message_start":
+                                if hasattr(event, "message") and hasattr(event.message, "usage"):
+                                    input_tokens = getattr(event.message.usage, "input_tokens", 0)
+                            elif event.type == "content_block_delta":
                                 delta = event.delta
                                 if delta.type == "text_delta":
                                     yield {"type": "text", "delta": delta.text}
+                            elif event.type == "message_delta":
+                                if hasattr(event, "usage") and event.usage:
+                                    output_tokens = getattr(event.usage, "output_tokens", output_tokens)
+                        
+                        try:
+                            final_msg = retry_stream.get_final_message()
+                            if hasattr(final_msg, "usage"):
+                                input_tokens = getattr(final_msg.usage, "input_tokens", input_tokens)
+                                output_tokens = getattr(final_msg.usage, "output_tokens", output_tokens)
+                        except Exception:
+                            pass
+                            
+                        in_c, out_c, total_c = calculate_cost(model_id, input_tokens, output_tokens)
+                        yield {
+                            "type": "usage_summary",
+                            "input_tokens": input_tokens,
+                            "output_tokens": output_tokens,
+                            "total_tokens": input_tokens + output_tokens,
+                            "cost": total_c,
+                            "badge": format_cost_badge(input_tokens, output_tokens, total_c)
+                        }
                     return
                 except Exception as retry_err:
                     raise ClaudeModelError(

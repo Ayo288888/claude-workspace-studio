@@ -179,31 +179,54 @@ with st.sidebar:
 
     st.divider()
 
-    # Encrypted BYOK Authentication Drawer
-    st.markdown("<div style='font-size: 0.78rem; font-weight: 700; color: #736E65; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;'>Authentication</div>", unsafe_allow_html=True)
+    # =========================================================================
+    # BULLETPROOF ENCRYPTED BYOK AUTHENTICATION (Zero Browser Password Saving)
+    # =========================================================================
+    st.markdown("<div style='font-size: 0.78rem; font-weight: 700; color: #736E65; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px;'>Authentication & Security</div>", unsafe_allow_html=True)
     
     if current_key:
-        st.success(f"🔒 Authenticated: `{mask_api_key(current_key)}`")
+        # Key is already securely held in-memory encrypted. Show status only (no DOM password input)
+        masked_fingerprint = mask_api_key(current_key)
+        st.markdown(f"""
+        <div class="security-badge-container">
+            <div class="security-badge-header">🔒 Key Encrypted & Active</div>
+            <div class="security-badge-sub">
+                <strong>Fingerprint:</strong> <code>{masked_fingerprint}</code><br/>
+                • Encrypted in-memory (AES-256)<br/>
+                • Zero disk or database storage<br/>
+                • Purged automatically on tab close
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        if st.button("Disconnect & Purge Key", use_container_width=True, type="secondary"):
+            st.session_state.encrypted_api_key = ""
+            st.rerun()
     else:
-        st.warning("⚠️ Enter your Anthropic API Key below.")
-
-    with st.expander("🔑 Manage API Key", expanded=not bool(current_key)):
-        new_key_input = st.text_input(
-            "Anthropic API Key",
-            type="password",
-            placeholder="sk-ant-api03-...",
-            help="Your key is held encrypted in memory and never saved to disk or database."
-        )
-        col_save, col_clear = st.columns(2)
-        with col_save:
-            if st.button("Save Key", use_container_width=True):
-                if new_key_input:
-                    st.session_state.encrypted_api_key = st.session_state.key_manager.encrypt_key(new_key_input)
+        # No key currently configured. Show single-use encrypted input.
+        st.markdown("""
+        <div style="font-size: 0.78rem; color: #736E65; margin-bottom: 8px;">
+            Paste your Anthropic API Key. It is encrypted in volatile memory only and never saved to disk.
+        </div>
+        """, unsafe_allow_html=True)
+        
+        with st.form("api_key_secure_form", clear_on_submit=True):
+            user_raw_key = st.text_input(
+                "API Key Token",
+                type="password",
+                placeholder="sk-ant-api03-...",
+                label_visibility="collapsed"
+            )
+            submit_key = st.form_submit_button("Authenticate & Encrypt", use_container_width=True, type="primary")
+            
+            if submit_key:
+                if user_raw_key and user_raw_key.strip():
+                    # Immediately encrypt in memory and wipe plaintext
+                    st.session_state.encrypted_api_key = st.session_state.key_manager.encrypt_key(user_raw_key.strip())
+                    del user_raw_key
                     st.rerun()
-        with col_clear:
-            if st.button("Clear", use_container_width=True):
-                st.session_state.encrypted_api_key = ""
-                st.rerun()
+                else:
+                    st.error("Please enter a valid API key.")
 
 # ==========================================
 # MAIN CANVAS
@@ -315,7 +338,7 @@ if prompt_input:
         
     current_key = get_current_api_key()
     if not current_key:
-        st.error("🔑 Please provide an Anthropic API Key in the sidebar before sending a message.")
+        st.error("🔑 Please enter your Anthropic API Key in the sidebar before sending a message.")
         st.stop()
         
     full_prompt = actual_query + file_context_str

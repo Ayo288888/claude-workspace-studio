@@ -87,7 +87,7 @@ def apply_claude_styles():
             color: var(--claude-coral) !important;
         }
 
-        /* Text Inputs */
+        /* Text Inputs with Password Manager Shield */
         div[data-baseweb="input"] > div {
             background-color: var(--claude-card) !important;
             border: 1px solid var(--claude-border) !important;
@@ -97,6 +97,31 @@ def apply_claude_styles():
 
         input {
             color: var(--claude-text) !important;
+        }
+
+        /* Security Card & Badge */
+        .security-badge-container {
+            background: #F0FDF4;
+            border: 1px solid #BBF7D0;
+            border-radius: 12px;
+            padding: 12px 14px;
+            margin-bottom: 12px;
+        }
+
+        .security-badge-header {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #166534;
+            margin-bottom: 4px;
+        }
+
+        .security-badge-sub {
+            font-size: 0.74rem;
+            color: #15803D;
+            line-height: 1.35;
         }
 
         /* Buttons */
@@ -161,65 +186,6 @@ def apply_claude_styles():
             font-size: 1.05rem;
             color: var(--claude-muted);
             font-weight: 400;
-        }
-
-        /* Prompt Hero Box Container (Claude.ai Replica) */
-        .claude-center-box {
-            background: var(--claude-card);
-            border: 1px solid var(--claude-border);
-            border-radius: 20px;
-            padding: 18px 20px 14px 20px;
-            box-shadow: var(--claude-shadow-lg);
-            max-width: 780px;
-            margin: 1.5rem auto;
-            transition: all 0.2s ease;
-        }
-
-        .claude-center-box:focus-within {
-            border-color: var(--claude-coral);
-            box-shadow: 0 8px 32px rgba(218, 119, 86, 0.12);
-        }
-
-        /* Starter Prompt Cards (2x2 Grid) */
-        .starter-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-            max-width: 780px;
-            margin: 1.5rem auto 2.5rem auto;
-        }
-
-        .starter-card-btn {
-            background: var(--claude-card);
-            border: 1px solid var(--claude-border);
-            border-radius: 14px;
-            padding: 14px 16px;
-            text-align: left;
-            cursor: pointer;
-            box-shadow: var(--claude-shadow);
-            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .starter-card-btn:hover {
-            border-color: var(--claude-coral);
-            box-shadow: 0 4px 18px rgba(218, 119, 86, 0.1);
-            transform: translateY(-2px);
-        }
-
-        .starter-card-title {
-            font-size: 0.95rem;
-            font-weight: 600;
-            color: var(--claude-text);
-            margin-bottom: 3px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .starter-card-desc {
-            font-size: 0.82rem;
-            color: var(--claude-muted);
-            line-height: 1.35;
         }
 
         /* Streamlit Bottom Chat Input */

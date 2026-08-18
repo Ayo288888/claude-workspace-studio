@@ -6,32 +6,30 @@ def apply_claude_styles():
         <style>
         @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600;700&display=swap');
 
-        /* Global Reset & Claude Colors */
+        /* Claude Dark Theme Variables */
         :root {
-            --claude-bg: #FAF9F5;
-            --claude-sidebar: #F3F0E6;
-            --claude-card: #FFFFFF;
-            --claude-border: #E5E0D8;
-            --claude-border-hover: #D0C9BE;
-            --claude-text: #2C2825;
-            --claude-muted: #736E65;
+            --claude-bg: #181816;
+            --claude-sidebar: #131311;
+            --claude-card: #222220;
+            --claude-card-hover: #292926;
+            --claude-border: #2E2E2A;
+            --claude-border-hover: #3E3E38;
+            --claude-text: #ECEAE4;
+            --claude-muted: #8E8A80;
             --claude-coral: #DA7756;
-            --claude-coral-hover: #C85B38;
-            --claude-coral-light: #FDF4F0;
-            --claude-badge-blue: #2563EB;
-            --claude-badge-bg: #EFF6FF;
-            --claude-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
-            --claude-shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.06);
+            --claude-coral-hover: #E08567;
+            --claude-coral-dim: rgba(218, 119, 86, 0.15);
+            --claude-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+            --claude-shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.4);
         }
 
-        /* Base Application Layout */
+        /* Base Application */
         .stApp {
             background-color: var(--claude-bg) !important;
             color: var(--claude-text) !important;
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
         }
 
-        /* Top Header & Chrome Cleaner */
         header[data-testid="stHeader"] {
             background: transparent !important;
             border-bottom: none !important;
@@ -40,37 +38,36 @@ def apply_claude_styles():
             display: none !important;
         }
 
-        /* Sidebar Styling - Polished Claude Layout */
+        /* Sidebar Styling */
         section[data-testid="stSidebar"] {
             background-color: var(--claude-sidebar) !important;
             border-right: 1px solid var(--claude-border) !important;
-            padding: 1.5rem 1rem !important;
+            padding: 1.25rem 0.9rem !important;
         }
 
         section[data-testid="stSidebar"] hr {
             border-color: var(--claude-border) !important;
-            margin: 1.2rem 0 !important;
+            margin: 1rem 0 !important;
         }
 
         .sidebar-section-title {
-            font-size: 0.76rem;
+            font-size: 0.72rem;
             font-weight: 700;
             color: var(--claude-muted);
             text-transform: uppercase;
-            letter-spacing: 0.07em;
+            letter-spacing: 0.08em;
             margin-bottom: 0.5rem;
             margin-top: 0.4rem;
         }
 
-        /* Form Inputs & Selectboxes Everywhere */
+        /* Form Inputs, Selectboxes, Menus */
         div[data-baseweb="select"] > div {
             background-color: var(--claude-card) !important;
             border: 1px solid var(--claude-border) !important;
-            border-radius: 12px !important;
+            border-radius: 10px !important;
             color: var(--claude-text) !important;
             font-weight: 500 !important;
-            font-size: 0.9rem !important;
-            box-shadow: var(--claude-shadow) !important;
+            font-size: 0.88rem !important;
             transition: all 0.2s ease !important;
         }
 
@@ -88,81 +85,44 @@ def apply_claude_styles():
 
         li[role="option"] {
             color: var(--claude-text) !important;
-            border-radius: 8px !important;
+            border-radius: 6px !important;
             margin: 2px 4px !important;
+            font-size: 0.88rem !important;
         }
 
         li[role="option"]:hover, li[aria-selected="true"] {
-            background-color: var(--claude-coral-light) !important;
+            background-color: var(--claude-coral-dim) !important;
             color: var(--claude-coral) !important;
         }
 
-        /* Text Inputs with Password Manager Shield */
-        div[data-baseweb="input"] > div {
+        div[data-baseweb="input"] > div, div[data-baseweb="textarea"] > div {
             background-color: var(--claude-card) !important;
             border: 1px solid var(--claude-border) !important;
-            border-radius: 12px !important;
+            border-radius: 10px !important;
             color: var(--claude-text) !important;
         }
 
-        input {
+        input, textarea {
             color: var(--claude-text) !important;
         }
 
-        /* Security Card & Badge */
-        .security-badge-container {
-            background: #F0FDF4;
-            border: 1px solid #BBF7D0;
-            border-radius: 12px;
-            padding: 12px 14px;
-            margin-bottom: 10px;
-        }
-
-        .security-badge-header {
-            font-size: 0.82rem;
-            font-weight: 700;
-            color: #166534;
-            margin-bottom: 3px;
-        }
-
-        .security-badge-sub {
-            font-size: 0.74rem;
-            color: #15803D;
-            line-height: 1.35;
-        }
-
-        /* Workbench Token Cost Badge */
-        .cost-token-badge {
-            display: inline-flex;
-            align-items: center;
-            background-color: var(--claude-sidebar);
-            border: 1px solid var(--claude-border);
-            padding: 3px 10px;
-            border-radius: 20px;
-            font-size: 0.76rem;
-            font-family: 'Consolas', 'Courier New', monospace;
-            color: var(--claude-muted);
-            margin-top: 8px;
-        }
-
-        /* Buttons */
+        /* Standard Buttons */
         .stButton > button {
-            border-radius: 12px !important;
+            border-radius: 10px !important;
             border: 1px solid var(--claude-border) !important;
             background-color: var(--claude-card) !important;
             color: var(--claude-text) !important;
             font-weight: 500 !important;
-            font-size: 0.9rem !important;
-            padding: 0.5rem 1rem !important;
+            font-size: 0.88rem !important;
+            padding: 0.45rem 0.9rem !important;
             box-shadow: var(--claude-shadow) !important;
-            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+            transition: all 0.15s ease !important;
         }
 
         .stButton > button:hover {
-            border-color: var(--claude-coral) !important;
-            color: var(--claude-coral) !important;
-            background-color: var(--claude-coral-light) !important;
-            transform: translateY(-1px) !important;
+            border-color: var(--claude-border-hover) !important;
+            background-color: var(--claude-card-hover) !important;
+            color: var(--claude-text) !important;
         }
 
         .stButton > button[kind="primary"] {
@@ -174,34 +134,191 @@ def apply_claude_styles():
         .stButton > button[kind="primary"]:hover {
             background-color: var(--claude-coral-hover) !important;
             border-color: var(--claude-coral-hover) !important;
-            color: #FFFFFF !important;
+        }
+
+        /* + New Chat Pill Button */
+        .new-chat-btn button {
+            border-radius: 20px !important;
+            font-weight: 600 !important;
+            text-align: left !important;
+            padding: 0.5rem 1rem !important;
         }
 
         /* Hero Typography */
-        .claude-hero-wrapper {
+        .claude-hero-container {
             text-align: center;
-            max-width: 760px;
-            margin: 2.5rem auto 1.5rem auto;
+            max-width: 820px;
+            margin: 3.5rem auto 1.8rem auto;
             padding: 0 1rem;
         }
 
-        .claude-title {
+        .claude-hero-title {
             font-family: 'Instrument Serif', Georgia, serif;
-            font-size: 3.25rem;
+            font-size: 3.4rem;
             font-weight: 400;
             color: var(--claude-text);
             line-height: 1.1;
             letter-spacing: -0.02em;
-            margin-bottom: 0.5rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
         }
 
-        .claude-subtitle {
-            font-size: 1.05rem;
+        .claude-hero-asterisk {
+            color: var(--claude-coral);
+            font-size: 2.8rem;
+            line-height: 1;
+            font-family: 'Inter', sans-serif;
+            font-weight: 300;
+        }
+
+        /* Unified Chatbox Container */
+        .claude-chatbox-card {
+            background-color: var(--claude-card);
+            border: 1px solid var(--claude-border);
+            border-radius: 18px;
+            padding: 14px 18px 10px 18px;
+            box-shadow: var(--claude-shadow-lg);
+            margin: 1.5rem auto;
+            max-width: 820px;
+            transition: border-color 0.2s ease;
+        }
+
+        .claude-chatbox-card:focus-within {
+            border-color: var(--claude-border-hover);
+        }
+
+        /* Bottom Toolbar inside Chatbox */
+        .chatbox-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 10px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .toolbar-left, .toolbar-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Quick Starter Pill Row */
+        .starter-pills-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            max-width: 820px;
+            margin: 0.8rem auto 2.5rem auto;
+        }
+
+        /* Chat Message Cards */
+        .stChatMessage {
+            background-color: transparent !important;
+            border-radius: 12px !important;
+            padding: 0.9rem 1.1rem !important;
+            margin-bottom: 0.75rem !important;
+        }
+
+        div[data-testid="stChatMessage"]:nth-child(even) {
+            background-color: var(--claude-card) !important;
+            border: 1px solid var(--claude-border) !important;
+        }
+
+        /* Extended Thinking Monospace Panel */
+        .thinking-panel {
+            background: #1C1C1A;
+            border: 1px solid var(--claude-border);
+            border-radius: 10px;
+            padding: 12px 14px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 0.82rem;
             color: var(--claude-muted);
-            font-weight: 400;
+            line-height: 1.55;
+            max-height: 300px;
+            overflow-y: auto;
         }
 
-        /* Chat Input Container Integration */
+        /* Workbench Token Cost Badge */
+        .cost-token-badge {
+            display: inline-flex;
+            align-items: center;
+            background-color: #141412;
+            border: 1px solid var(--claude-border);
+            padding: 3px 10px;
+            border-radius: 16px;
+            font-size: 0.74rem;
+            font-family: 'Consolas', 'Courier New', monospace;
+            color: var(--claude-muted);
+            margin-top: 8px;
+        }
+
+        /* Security Card & Badge */
+        .security-badge-container {
+            background: rgba(22, 101, 52, 0.12);
+            border: 1px solid rgba(34, 197, 94, 0.25);
+            border-radius: 10px;
+            padding: 10px 12px;
+            margin-bottom: 10px;
+        }
+
+        .security-badge-header {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #4ADE80;
+            margin-bottom: 3px;
+        }
+
+        .security-badge-sub {
+            font-size: 0.73rem;
+            color: #86EFAC;
+            line-height: 1.35;
+        }
+
+        /* Usage Stats Widget in Sidebar */
+        .sidebar-usage-box {
+            background-color: var(--claude-card);
+            border: 1px solid var(--claude-border);
+            border-radius: 10px;
+            padding: 10px 12px;
+            margin-bottom: 10px;
+        }
+
+        .usage-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.78rem;
+            color: var(--claude-text);
+            margin-bottom: 4px;
+        }
+
+        .usage-label {
+            color: var(--claude-muted);
+        }
+
+        /* Expanders / Artifacts */
+        .streamlit-expanderHeader {
+            background-color: var(--claude-card) !important;
+            border: 1px solid var(--claude-border) !important;
+            border-radius: 10px !important;
+            font-weight: 600 !important;
+            color: var(--claude-text) !important;
+            font-size: 0.88rem !important;
+        }
+
+        .streamlit-expanderContent {
+            background-color: #1A1A18 !important;
+            border: 1px solid var(--claude-border) !important;
+            border-top: none !important;
+            border-bottom-left-radius: 10px !important;
+            border-bottom-right-radius: 10px !important;
+        }
+
+        /* Streamlit Bottom Chat Input Integration */
         div[data-testid="stChatInput"] {
             background-color: transparent !important;
         }
@@ -215,8 +332,7 @@ def apply_claude_styles():
         }
 
         div[data-testid="stChatInput"] > div:focus-within {
-            border-color: var(--claude-coral) !important;
-            box-shadow: 0 6px 24px rgba(218, 119, 86, 0.14) !important;
+            border-color: var(--claude-border-hover) !important;
         }
 
         div[data-testid="stChatInput"] textarea {
@@ -228,69 +344,7 @@ def apply_claude_styles():
             color: var(--claude-coral) !important;
         }
 
-        /* Inline Chat Attachment Popover / Button */
-        div[data-testid="stPopover"] > button {
-            border-radius: 12px !important;
-            border: 1px solid var(--claude-border) !important;
-            background-color: var(--claude-card) !important;
-            color: var(--claude-muted) !important;
-            font-weight: 600 !important;
-            padding: 0.45rem 0.75rem !important;
-            box-shadow: var(--claude-shadow) !important;
-        }
-
-        div[data-testid="stPopover"] > button:hover {
-            border-color: var(--claude-coral) !important;
-            color: var(--claude-coral) !important;
-        }
-
-        /* File Attachment Chips */
-        .attachment-chip {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            background-color: var(--claude-card);
-            border: 1px solid var(--claude-border);
-            border-radius: 20px;
-            padding: 4px 12px;
-            font-size: 0.8rem;
-            color: var(--claude-text);
-            margin: 4px 4px 8px 0;
-            box-shadow: var(--claude-shadow);
-        }
-
-        /* Chat Message Cards */
-        .stChatMessage {
-            background-color: transparent !important;
-            border-radius: 14px !important;
-            padding: 1rem 1.25rem !important;
-            margin-bottom: 0.75rem !important;
-        }
-
-        div[data-testid="stChatMessage"]:nth-child(even) {
-            background-color: var(--claude-card) !important;
-            border: 1px solid var(--claude-border) !important;
-            box-shadow: var(--claude-shadow) !important;
-        }
-
-        /* Expanders / Artifacts */
-        .streamlit-expanderHeader {
-            background-color: var(--claude-sidebar) !important;
-            border: 1px solid var(--claude-border) !important;
-            border-radius: 10px !important;
-            font-weight: 600 !important;
-            color: var(--claude-text) !important;
-        }
-
-        .streamlit-expanderContent {
-            background-color: var(--claude-card) !important;
-            border: 1px solid var(--claude-border) !important;
-            border-top: none !important;
-            border-bottom-left-radius: 10px !important;
-            border-bottom-right-radius: 10px !important;
-        }
-
-        /* Model Badge / Pill */
+        /* New Model Pill */
         .new-pill {
             background: #2563EB;
             color: #FFFFFF;
@@ -303,59 +357,43 @@ def apply_claude_styles():
             vertical-align: middle;
         }
 
-        /* Front-End Error Diagnostic Card */
+        /* Error Diagnostic Card */
         .claude-error-card {
-            background-color: #FEF2F2;
-            border: 1px solid #FCA5A5;
-            border-left: 5px solid #EF4444;
-            border-radius: 14px;
-            padding: 18px 20px;
-            margin: 16px 0;
-            box-shadow: 0 4px 16px rgba(239, 68, 68, 0.08);
+            background-color: #261414;
+            border: 1px solid #7F1D1D;
+            border-left: 4px solid #EF4444;
+            border-radius: 12px;
+            padding: 16px 18px;
+            margin: 14px 0;
         }
 
         .claude-error-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
 
         .claude-error-title {
             font-weight: 700;
-            font-size: 1rem;
-            color: #991B1B;
+            font-size: 0.95rem;
+            color: #F87171;
         }
 
         .claude-error-code {
-            background: #FEE2E2;
-            color: #B91C1C;
-            padding: 3px 10px;
-            border-radius: 8px;
-            font-size: 0.75rem;
+            background: #450A0A;
+            color: #FCA5A5;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 0.72rem;
             font-family: monospace;
             font-weight: 700;
-            border: 1px solid #FECACA;
         }
 
         .claude-error-body {
-            font-size: 0.9rem;
-            color: #7F1D1D;
-            line-height: 1.55;
-        }
-
-        /* Extended Thinking Monospace Panel */
-        .thinking-panel {
-            background: #F9F8F5;
-            border: 1px solid var(--claude-border);
-            border-radius: 10px;
-            padding: 14px;
-            font-family: 'Consolas', 'Courier New', monospace;
-            font-size: 0.83rem;
-            color: var(--claude-muted);
-            line-height: 1.55;
-            max-height: 320px;
-            overflow-y: auto;
+            font-size: 0.86rem;
+            color: #FECACA;
+            line-height: 1.5;
         }
         </style>
         """,

@@ -325,12 +325,15 @@ if not has_messages:
 # CHAT MESSAGE HISTORY
 for msg in messages:
     with st.chat_message(msg["role"]):
-        if msg.get("thinking"):
-            with st.expander("Extended Thinking Process", expanded=False):
+        has_text = bool(msg.get("content") and str(msg["content"]).strip())
+        has_thinking = bool(msg.get("thinking") and str(msg["thinking"]).strip())
+
+        if has_thinking:
+            with st.expander("Extended Thinking Process", expanded=not has_text):
                 st.markdown(f"<div class='thinking-panel'>{msg['thinking']}</div>", unsafe_allow_html=True)
         
         # If content is string or multimodal
-        if isinstance(msg["content"], str):
+        if isinstance(msg["content"], str) and msg["content"].strip():
             st.markdown(msg["content"])
             artifacts = extract_artifacts(msg["content"])
             if artifacts:
@@ -341,8 +344,10 @@ for msg in messages:
             for block in msg["content"]:
                 if block.get("type") == "image":
                     st.caption("[Attached Image]")
-                elif block.get("type") == "text":
-                    st.markdown(block.get("text", ""))
+                elif block.get("type") == "text" and block.get("text"):
+                    st.markdown(block.get("text"))
+        elif not has_text and has_thinking:
+            st.markdown("*Claude completed its deep reasoning steps (see thinking process above).*")
 
         # Display Workbench-style Cost and Token Badge for Assistant Messages
         if msg["role"] == "assistant":
@@ -513,8 +518,7 @@ if prompt_input:
                     model_id=target_model_id,
                     messages=history_messages,
                     system=system_prompt,
-                    effort_level=target_effort,
-                    max_tokens=8192
+                    effort_level=target_effort
                 )
                 
                 for chunk in stream:
@@ -530,13 +534,17 @@ if prompt_input:
                         cost_placeholder.markdown(f"<div class='cost-token-badge'>{chunk['badge']}</div>", unsafe_allow_html=True)
                         
             # Final output render without cursor
-            response_placeholder.markdown(full_text)
+            if full_text.strip():
+                response_placeholder.markdown(full_text)
+            elif full_thinking.strip():
+                # If model spent all tokens in reasoning without writing text, present reasoning clearly
+                response_placeholder.markdown(f"*Claude completed its deep reasoning steps (see thinking process above).*")
             
             # Save assistant response with exact tokens & cost to DB
             db.save_message(
                 session_id=st.session_state.current_session_id,
                 role="assistant",
-                content=full_text,
+                content=full_text if full_text.strip() else full_thinking,
                 thinking=full_thinking,
                 tokens=final_usage["output_tokens"],
                 input_tokens=final_usage["input_tokens"],
@@ -550,10 +558,11 @@ if prompt_input:
                 db.update_session_title(st.session_state.current_session_id, auto_title)
                 
             # Render any extracted artifacts
-            artifacts = extract_artifacts(full_text)
-            for art in artifacts:
-                with st.expander(f"Artifact: {art['title']}", expanded=True):
-                    st.code(art["code"], language=art["language"])
+            if full_text.strip():
+                artifacts = extract_artifacts(full_text)
+                for art in artifacts:
+                    with st.expander(f"Artifact: {art['title']}", expanded=True):
+                        st.code(art["code"], language=art["language"])
                     
         except ClaudeModelError as cme:
             status_badge = f"{cme.status_code} {cme.error_type}" if cme.status_code else cme.error_type

@@ -12,6 +12,7 @@ from claude_client import (
     ClaudeModelError,
     CLAUDE_MODELS,
     MODEL_DETAILS,
+    MODEL_CONFIG,
     EFFORT_LEVELS,
     SYSTEM_PRESETS,
     extract_artifacts,
@@ -77,6 +78,7 @@ if not st.session_state.current_session_id:
         new_id = db.create_session(
             title="New Chat",
             model="Claude 3.7 Sonnet (Reasoning)",
+            effort="Medium",
             system_prompt=SYSTEM_PRESETS["General Assistant"]
         )
         st.session_state.current_session_id = new_id
@@ -87,10 +89,18 @@ if not current_session:
     new_id = db.create_session(
         title="New Chat",
         model="Claude 3.7 Sonnet (Reasoning)",
+        effort="Medium",
         system_prompt=SYSTEM_PRESETS["General Assistant"]
     )
     st.session_state.current_session_id = new_id
     current_session = db.get_session(new_id)
+
+# Restore session-locked model and effort configuration to ensure prompt caching integrity
+if current_session:
+    if current_session.get("model"):
+        st.session_state.selected_model_name = current_session["model"]
+    if current_session.get("effort"):
+        st.session_state.selected_effort = current_session["effort"]
 
 # Helper to get decrypted API key in memory
 def get_current_api_key() -> str:
@@ -128,7 +138,7 @@ messages = db.get_messages(st.session_state.current_session_id)
 has_messages = len(messages) > 0
 
 # Total session tokens and cost
-total_session_tokens = sum(m.get("input_tokens", 0) + m.get("output_tokens", m.get("tokens", 0)) for m in messages)
+total_session_tokens = sum(m.get("input_tokens", 0) + m.get("output_tokens", m.get("tokens", 0)) + m.get("cache_read_tokens", 0) for m in messages)
 total_session_cost = sum(m.get("cost", 0.0) for m in messages)
 
 # ==========================================
@@ -148,6 +158,7 @@ with st.sidebar:
         new_id = db.create_session(
             title="New Chat",
             model=st.session_state.selected_model_name,
+            effort=st.session_state.selected_effort,
             system_prompt=SYSTEM_PRESETS["General Assistant"]
         )
         st.session_state.current_session_id = new_id
@@ -304,6 +315,7 @@ if has_messages:
             <span> • </span>
             <span>{selected_preset}</span>
             {"<span> • 🌐 Web Access Active</span>" if st.session_state.web_search_active else ""}
+            <span style="color: #4ADE80; font-size: 0.78rem;"> • Prompt Caching Active</span>
         </div>
         <div style="font-size: 0.78rem; font-family: monospace;">
             Total: {total_session_tokens:,} tokens (${total_session_cost:.4f})
@@ -381,9 +393,10 @@ for msg in messages:
         if msg["role"] == "assistant":
             in_t = msg.get("input_tokens", 0)
             out_t = msg.get("output_tokens", msg.get("tokens", 0))
+            cached_t = msg.get("cache_read_tokens", 0)
             cost_val = msg.get("cost", 0.0)
-            if in_t > 0 or out_t > 0 or cost_val > 0:
-                cost_badge_str = format_cost_badge(in_t, out_t, cost_val)
+            if in_t > 0 or out_t > 0 or cost_val > 0 or cached_t > 0:
+                cost_badge_str = format_cost_badge(in_t, out_t, cost_val, cached_t)
                 st.markdown(f"<div class='cost-token-badge'>{cost_badge_str}</div>", unsafe_allow_html=True)
 
 # =========================================================================
@@ -406,10 +419,19 @@ with bottom_ctx:
     with col_model_btn:
         with st.popover(f"{curr_model_display} {st.session_state.selected_effort} ⌃ ⌄", help="Configure Model & Reasoning Effort"):
             st.markdown("<div style='font-size: 0.8rem; font-weight: 700; color: #8E8A80; text-transform: uppercase;'>Model Selection</div>", unsafe_allow_html=True)
+            
+            # Find default index
+            model_keys = list(model_choices.keys())
+            def_idx = 0
+            for idx, k in enumerate(model_keys):
+                if k == st.session_state.selected_model_name or model_choices[k] == st.session_state.selected_model_name:
+                    def_idx = idx
+                    break
+                    
             selected_model_label = st.selectbox(
                 "Model",
-                options=list(model_choices.keys()),
-                index=0,
+                options=model_keys,
+                index=def_idx,
                 label_visibility="collapsed",
                 key="bottom_model_select"
             )
@@ -420,8 +442,7 @@ with bottom_ctx:
             else:
                 selected_model_id = model_choices[selected_model_label]
                 selected_model_name = selected_model_label
-            st.session_state.selected_model_name = selected_model_name
-
+                
             st.markdown("<div style='font-size: 0.8rem; font-weight: 700; color: #8E8A80; text-transform: uppercase; margin-top: 10px;'>Reasoning Effort</div>", unsafe_allow_html=True)
             selected_effort = st.select_slider(
                 "Effort",
@@ -430,9 +451,14 @@ with bottom_ctx:
                 label_visibility="collapsed",
                 key="bottom_effort_slider"
             )
-            st.session_state.selected_effort = selected_effort
+            
+            # Update session settings in DB to lock parameters
+            if selected_model_name != st.session_state.selected_model_name or selected_effort != st.session_state.selected_effort:
+                st.session_state.selected_model_name = selected_model_name
+                st.session_state.selected_effort = selected_effort
+                db.update_session_settings(st.session_state.current_session_id, selected_model_name, selected_effort)
 
-    # Native persistent file upload attached directly inside chat input (accepts all file types: images, notebooks, code, etc.)
+    # Native persistent file upload attached directly inside chat input (accepts all file types)
     prompt_input = st.chat_input(
         prompt_placeholder,
         accept_file="multiple"
@@ -504,7 +530,7 @@ if prompt_input:
         
         full_text = ""
         full_thinking = ""
-        final_usage = {"input_tokens": 0, "output_tokens": 0, "cost": 0.0}
+        final_usage = {"input_tokens": 0, "output_tokens": 0, "cache_read_tokens": 0, "cache_creation_tokens": 0, "cost": 0.0}
         
         target_model_name = st.session_state.selected_model_name
         target_model_id = model_choices.get(target_model_name, CLAUDE_MODELS.get(target_model_name, "claude-3-7-sonnet-20250219"))
@@ -540,7 +566,7 @@ if prompt_input:
             elif full_thinking.strip():
                 response_placeholder.markdown(f"*Claude completed its deep reasoning steps (see thinking process above).*")
             
-            # Save assistant response with exact tokens & cost to DB
+            # Save assistant response with exact tokens & cost & cache metrics to DB
             db.save_message(
                 session_id=st.session_state.current_session_id,
                 role="assistant",
@@ -549,6 +575,8 @@ if prompt_input:
                 tokens=final_usage["output_tokens"],
                 input_tokens=final_usage["input_tokens"],
                 output_tokens=final_usage["output_tokens"],
+                cache_read_tokens=final_usage.get("cache_read_tokens", 0),
+                cache_creation_tokens=final_usage.get("cache_creation_tokens", 0),
                 cost=final_usage["cost"]
             )
             

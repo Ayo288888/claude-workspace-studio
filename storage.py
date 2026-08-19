@@ -24,6 +24,7 @@ class Database:
                     id TEXT PRIMARY KEY,
                     title TEXT NOT NULL,
                     model TEXT NOT NULL,
+                    effort TEXT DEFAULT 'Medium',
                     system_prompt TEXT DEFAULT '',
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -39,26 +40,48 @@ class Database:
                     tokens INTEGER DEFAULT 0,
                     input_tokens INTEGER DEFAULT 0,
                     output_tokens INTEGER DEFAULT 0,
+                    cache_read_tokens INTEGER DEFAULT 0,
+                    cache_creation_tokens INTEGER DEFAULT 0,
                     cost REAL DEFAULT 0.0,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY(session_id) REFERENCES sessions(id) ON DELETE CASCADE
                 )
             """)
             # Ensure columns exist for upgraded schemas
-            for col, col_type in [("input_tokens", "INTEGER DEFAULT 0"), ("output_tokens", "INTEGER DEFAULT 0"), ("cost", "REAL DEFAULT 0.0")]:
+            for col, col_type in [
+                ("effort", "TEXT DEFAULT 'Medium'"),
+            ]:
+                try:
+                    conn.execute(f"ALTER TABLE sessions ADD COLUMN {col} {col_type}")
+                except Exception:
+                    pass
+
+            for col, col_type in [
+                ("input_tokens", "INTEGER DEFAULT 0"),
+                ("output_tokens", "INTEGER DEFAULT 0"),
+                ("cache_read_tokens", "INTEGER DEFAULT 0"),
+                ("cache_creation_tokens", "INTEGER DEFAULT 0"),
+                ("cost", "REAL DEFAULT 0.0"),
+            ]:
                 try:
                     conn.execute(f"ALTER TABLE messages ADD COLUMN {col} {col_type}")
                 except Exception:
                     pass
             conn.commit()
 
-    def create_session(self, title: str = "New Conversation", model: str = "claude-3-7-sonnet-20250219", system_prompt: str = "") -> str:
+    def create_session(
+        self,
+        title: str = "New Conversation",
+        model: str = "claude-3-7-sonnet-20250219",
+        effort: str = "Medium",
+        system_prompt: str = ""
+    ) -> str:
         session_id = str(uuid.uuid4())
         now = datetime.now(timezone.utc).isoformat()
         with self._get_conn() as conn:
             conn.execute(
-                "INSERT INTO sessions (id, title, model, system_prompt, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
-                (session_id, title, model, system_prompt, now, now)
+                "INSERT INTO sessions (id, title, model, effort, system_prompt, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (session_id, title, model, effort, system_prompt, now, now)
             )
             conn.commit()
         return session_id
@@ -74,6 +97,15 @@ class Database:
             row = cur.fetchone()
             return dict(row) if row else None
 
+    def update_session_settings(self, session_id: str, model: str, effort: str) -> None:
+        now = datetime.now(timezone.utc).isoformat()
+        with self._get_conn() as conn:
+            conn.execute(
+                "UPDATE sessions SET model = ?, effort = ?, updated_at = ? WHERE id = ?",
+                (model, effort, now, session_id)
+            )
+            conn.commit()
+
     def save_message(
         self,
         session_id: str,
@@ -83,14 +115,24 @@ class Database:
         tokens: int = 0,
         input_tokens: int = 0,
         output_tokens: int = 0,
+        cache_read_tokens: int = 0,
+        cache_creation_tokens: int = 0,
         cost: float = 0.0
     ) -> str:
         msg_id = str(uuid.uuid4())
         now = datetime.now(timezone.utc).isoformat()
         with self._get_conn() as conn:
             conn.execute(
-                "INSERT INTO messages (id, session_id, role, content, thinking, tokens, input_tokens, output_tokens, cost, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (msg_id, session_id, role, content, thinking, tokens, input_tokens, output_tokens, cost, now)
+                """INSERT INTO messages (
+                    id, session_id, role, content, thinking, tokens,
+                    input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens,
+                    cost, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    msg_id, session_id, role, content, thinking, tokens,
+                    input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens,
+                    cost, now
+                )
             )
             conn.execute("UPDATE sessions SET updated_at = ? WHERE id = ?", (now, session_id))
             conn.commit()

@@ -173,7 +173,8 @@ with st.sidebar:
         "System Preset",
         options=list(SYSTEM_PRESETS.keys()),
         index=0,
-        label_visibility="collapsed"
+        label_visibility="collapsed",
+        key="sidebar_preset_select"
     )
     if selected_preset == "Custom Instructions...":
         custom_system_input = st.text_area(
@@ -400,7 +401,8 @@ for msg in messages:
                 st.markdown(f"<div class='cost-token-badge'>{cost_badge_str}</div>", unsafe_allow_html=True)
 
 # =========================================================================
-# PERSISTENT STICKY BOTTOM BAR (MODEL & EFFORT + CHAT INPUT + ATTACH)
+# PERSISTENT CHAT INPUT CONTAINER & MODEL SELECTION CONTROLS
+# Single unified location pinned directly with chat input at the bottom
 # =========================================================================
 
 curr_model_display = st.session_state.selected_model_name.split("(")[0].strip()
@@ -414,13 +416,13 @@ else:
     bottom_ctx = st.container()
 
 with bottom_ctx:
-    # Sticky Model & Effort Selector Trigger - Lives exclusively inside chat input area
+    # Single consolidated Model & Effort dropdown control pinned with chat input
     col_model_btn, col_spacer = st.columns([0.48, 0.52])
     with col_model_btn:
         with st.popover(f"{curr_model_display} • {st.session_state.selected_effort} ⌄", help="Select Model & Reasoning Effort"):
             st.markdown("<div style='font-size: 0.8rem; font-weight: 700; color: #8E8A80; text-transform: uppercase;'>Model Selection</div>", unsafe_allow_html=True)
             
-            # Find default index
+            # Find default index based on session_state
             model_keys = list(model_choices.keys())
             def_idx = 0
             for idx, k in enumerate(model_keys):
@@ -433,38 +435,38 @@ with bottom_ctx:
                 options=model_keys,
                 index=def_idx,
                 label_visibility="collapsed",
-                key="bottom_model_select"
+                key="chat_input_model_select"
             )
             if selected_model_label == "Custom Model ID...":
-                custom_id_input = st.text_input("Model ID", placeholder="e.g. claude-opus-4-6", key="bottom_custom_id")
+                custom_id_input = st.text_input("Model ID", placeholder="e.g. claude-opus-4-6", key="chat_input_custom_model_id")
                 selected_model_id = custom_id_input.strip() if custom_id_input else "claude-3-7-sonnet-20250219"
-                selected_model_name = f"Custom ({selected_model_id})"
+                new_model_name = f"Custom ({selected_model_id})"
             else:
                 selected_model_id = model_choices[selected_model_label]
-                selected_model_name = selected_model_label
+                new_model_name = selected_model_label
                 
             st.markdown("<div style='font-size: 0.8rem; font-weight: 700; color: #8E8A80; text-transform: uppercase; margin-top: 10px;'>Reasoning Effort</div>", unsafe_allow_html=True)
-            selected_effort = st.select_slider(
+            new_effort = st.select_slider(
                 "Effort",
                 options=list(EFFORT_LEVELS.keys()),
                 value=st.session_state.selected_effort if st.session_state.selected_effort in EFFORT_LEVELS else "Medium",
                 label_visibility="collapsed",
-                key="bottom_effort_slider"
+                key="chat_input_effort_slider"
             )
 
             # Warning if model is switched mid-conversation
             initial_session_model = current_session.get("model", "") if current_session else ""
-            if has_messages and initial_session_model and selected_model_name != initial_session_model:
+            if has_messages and initial_session_model and new_model_name != initial_session_model:
                 st.warning(
                     "Switching models mid-conversation preserves chat history, but prompt caching will restart for the new model prefix on your next message.",
                     icon="⚠️"
                 )
             
-            # Update session settings in DB to persist selected model and effort across reloads
-            if selected_model_name != st.session_state.selected_model_name or selected_effort != st.session_state.selected_effort:
-                st.session_state.selected_model_name = selected_model_name
-                st.session_state.selected_effort = selected_effort
-                db.update_session_settings(st.session_state.current_session_id, selected_model_name, selected_effort)
+            # Update session settings in DB and session_state to persist selected model and effort across reloads
+            if new_model_name != st.session_state.selected_model_name or new_effort != st.session_state.selected_effort:
+                st.session_state.selected_model_name = new_model_name
+                st.session_state.selected_effort = new_effort
+                db.update_session_settings(st.session_state.current_session_id, new_model_name, new_effort)
 
     # Native persistent file upload attached directly inside chat input (accepts all file types)
     prompt_input = st.chat_input(

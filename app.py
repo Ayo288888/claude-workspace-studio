@@ -401,8 +401,8 @@ for msg in messages:
                 st.markdown(f"<div class='cost-token-badge'>{cost_badge_str}</div>", unsafe_allow_html=True)
 
 # =========================================================================
-# PERSISTENT CHAT INPUT CONTAINER & MODEL SELECTION CONTROLS
-# Single unified location pinned directly with chat input at the bottom
+# PERSISTENT CHAT INPUT ROW (MODEL SELECTOR + UPLOAD + TEXT INPUT + SEND)
+# Unified single row layout docked at the bottom of the chat interface
 # =========================================================================
 
 curr_model_display = st.session_state.selected_model_name.split("(")[0].strip()
@@ -416,10 +416,11 @@ else:
     bottom_ctx = st.container()
 
 with bottom_ctx:
-    # Single consolidated Model & Effort dropdown control pinned with chat input
-    col_model_btn, col_spacer = st.columns([0.48, 0.52])
-    with col_model_btn:
-        with st.popover(f"{curr_model_display} • {st.session_state.selected_effort} ⌄", help="Select Model & Reasoning Effort"):
+    # Single horizontal row grouping model selector and chat input (with upload & send)
+    col_model, col_input = st.columns([0.24, 0.76], gap="small", vertical_alignment="center")
+    
+    with col_model:
+        with st.popover(f"{curr_model_display} • {st.session_state.selected_effort} ⌄", help="Select Model & Reasoning Effort", use_container_width=True):
             st.markdown("<div style='font-size: 0.8rem; font-weight: 700; color: #8E8A80; text-transform: uppercase;'>Model Selection</div>", unsafe_allow_html=True)
             
             # Find default index based on session_state
@@ -468,11 +469,12 @@ with bottom_ctx:
                 st.session_state.selected_effort = new_effort
                 db.update_session_settings(st.session_state.current_session_id, new_model_name, new_effort)
 
-    # Native persistent file upload attached directly inside chat input (accepts all file types)
-    prompt_input = st.chat_input(
-        prompt_placeholder,
-        accept_file="multiple"
-    )
+    with col_input:
+        # Native persistent file upload attached directly inside chat input (accepts all file types)
+        prompt_input = st.chat_input(
+            prompt_placeholder,
+            accept_file="multiple"
+        )
 
 if prompt_input:
     # Extract query text and uploaded files from ChatInputValue or str

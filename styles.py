@@ -251,12 +251,44 @@ def apply_claude_styles():
         }
 
         /* =========================================================================
-           PERSISTENT CHAT INPUT CONTAINER & INLINE MODEL/EFFORT PILL CONTROLS
+           PERSISTENT UNIFIED CHAT INPUT ROW (MODEL SELECTOR + UPLOAD + TEXT + SEND)
            ========================================================================= */
         div[data-testid="stBottom"] {
             background-color: var(--claude-bg) !important;
-            padding-top: 4px !important;
-            padding-bottom: 10px !important;
+            padding-top: 6px !important;
+            padding-bottom: 12px !important;
+        }
+
+        div[data-testid="stBottom"] div[data-testid="stHorizontalBlock"] {
+            align-items: center !important;
+            gap: 10px !important;
+        }
+
+        /* Inline Model Popover Button inside the same input bar row */
+        div[data-testid="stBottom"] div[data-testid="stPopover"] > button {
+            background-color: var(--claude-card) !important;
+            border: 1px solid var(--claude-border) !important;
+            border-radius: 14px !important;
+            color: var(--claude-text) !important;
+            font-size: 0.82rem !important;
+            font-weight: 500 !important;
+            padding: 0.4rem 0.85rem !important;
+            height: 48px !important;
+            box-shadow: var(--claude-shadow) !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 6px !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            transition: all 0.15s ease !important;
+        }
+
+        div[data-testid="stBottom"] div[data-testid="stPopover"] > button:hover {
+            background-color: var(--claude-card-hover) !important;
+            border-color: var(--claude-border-hover) !important;
+            color: #FFFFFF !important;
         }
 
         /* Streamlit Bottom Chat Input Integration */
@@ -298,30 +330,6 @@ def apply_claude_styles():
         div[data-testid="stChatInput"] button[aria-label*="file" i]:hover,
         div[data-testid="stChatInput"] button[aria-label*="attach" i]:hover {
             color: var(--claude-text) !important;
-        }
-
-        /* Inline Model Popover Button beside/above the input toolbar */
-        div[data-testid="stBottom"] div[data-testid="stPopover"] > button {
-            background-color: var(--claude-btn-bg) !important;
-            border: 1px solid var(--claude-btn-border) !important;
-            border-radius: 8px !important;
-            color: var(--claude-text) !important;
-            font-size: 0.82rem !important;
-            font-weight: 500 !important;
-            padding: 0.28rem 0.75rem !important;
-            height: 32px !important;
-            box-shadow: none !important;
-            display: inline-flex !important;
-            align-items: center !important;
-            gap: 6px !important;
-            margin-bottom: 2px !important;
-            transition: all 0.15s ease !important;
-        }
-
-        div[data-testid="stBottom"] div[data-testid="stPopover"] > button:hover {
-            background-color: var(--claude-card-hover) !important;
-            border-color: #4E4E48 !important;
-            color: #FFFFFF !important;
         }
 
         /* File Preview Chip inside stChatInput */

@@ -314,6 +314,29 @@ def apply_claude_styles():
             color: var(--claude-coral) !important;
         }
 
+        /* Inline File Attachment Paperclip Button inside stChatInput */
+        div[data-testid="stChatInput"] button[data-testid="stChatInputFileButton"],
+        div[data-testid="stChatInput"] button[aria-label*="file" i],
+        div[data-testid="stChatInput"] button[aria-label*="attach" i],
+        div[data-testid="stChatInput"] button:has(svg path) {
+            color: var(--claude-muted) !important;
+        }
+
+        div[data-testid="stChatInput"] button[data-testid="stChatInputFileButton"]:hover,
+        div[data-testid="stChatInput"] button[aria-label*="file" i]:hover,
+        div[data-testid="stChatInput"] button[aria-label*="attach" i]:hover {
+            color: var(--claude-text) !important;
+        }
+
+        /* File Preview Chip inside stChatInput */
+        div[data-testid="stChatInput"] div[data-testid="stFileUploaderFile"],
+        div[data-testid="stChatInput"] div[role="status"] {
+            background-color: var(--claude-btn-bg) !important;
+            border: 1px solid var(--claude-btn-border) !important;
+            border-radius: 8px !important;
+            color: var(--claude-text) !important;
+        }
+
         /* Error Diagnostic Card */
         .claude-error-card {
             background-color: #261414;

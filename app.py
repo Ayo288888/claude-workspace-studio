@@ -359,29 +359,15 @@ for msg in messages:
                 st.markdown(f"<div class='cost-token-badge'>{cost_badge_str}</div>", unsafe_allow_html=True)
 
 # =========================================================================
-# BOTTOM CONTROLS & CHATBOX (Exact Replica of Uploaded Screenshots)
+# MODEL CONFIGURATION & STARTER PILLS
 # =========================================================================
 
 # Short model name for compact button display
 curr_model_display = st.session_state.selected_model_name.split("(")[0].strip()
 
-# Inline Button Row (Matching media_1787095922266.png & media_1787095935936.png)
-col_btn1, col_btn2, col_spacer = st.columns([0.16, 0.42, 0.42])
-
-with col_btn1:
-    with st.popover("+ Attach ⌄", help="Attach or paste images, code, PDFs, documents"):
-        st.markdown("<div style='font-size: 0.8rem; font-weight: 700; color: #8E8A80; text-transform: uppercase;'>Upload or Paste Files</div>", unsafe_allow_html=True)
-        uploaded_files = st.file_uploader(
-            "Upload files",
-            accept_multiple_files=True,
-            type=["png", "jpg", "jpeg", "webp", "gif", "txt", "md", "py", "js", "ts", "json", "csv", "pdf", "docx"],
-            label_visibility="collapsed",
-            key="chatbox_file_uploader",
-            help="Drag and drop or paste files (images, PDFs, documents, code)"
-        )
-
-with col_btn2:
-    with st.popover(f"{curr_model_display} {st.session_state.selected_effort} ⌃ ⌄", help="Configure Model & Effort"):
+col_model_btn, col_empty = st.columns([0.48, 0.52])
+with col_model_btn:
+    with st.popover(f"{curr_model_display} {st.session_state.selected_effort} ⌃ ⌄", help="Configure Model & Reasoning Effort"):
         st.markdown("<div style='font-size: 0.8rem; font-weight: 700; color: #8E8A80; text-transform: uppercase;'>Model Selection</div>", unsafe_allow_html=True)
         selected_model_label = st.selectbox(
             "Model",
@@ -408,18 +394,6 @@ with col_btn2:
             key="popover_effort_slider"
         )
         st.session_state.selected_effort = selected_effort
-
-# Process Uploaded Files / Pasted Images Context safely
-processed_files_list = []
-if uploaded_files:
-    for f in uploaded_files:
-        p = process_raw_file(f.name, f.read())
-        if p:
-            processed_files_list.append(p)
-            
-    if processed_files_list:
-        file_chips_html = "".join([f"<span class='attached-chip'>{f['name']}</span>" for f in processed_files_list])
-        st.markdown(f"<div style='margin-bottom: 8px;'>{file_chips_html}</div>", unsafe_allow_html=True)
 
 # Quick Starter Pill Tags beneath the chatbox on New Chat
 prefill_prompt = st.session_state.active_starter_prompt
@@ -449,21 +423,45 @@ if not has_messages:
 if prefill_prompt and not has_messages:
     st.info(f"Starter Prompt: *{prefill_prompt}* (Type your details below to send)")
 
-# The Main Chat Input Field (Matches media_1787095935936.png)
+# =========================================================================
+# PERSISTENT STICKY CHAT INPUT WITH INLINE ATTACH/PAPERCLIP BUTTON
+# =========================================================================
 prompt_placeholder = "Ask anything, @ to mention, / for actions" if not has_messages else "Reply to Claude..."
-prompt_input = st.chat_input(prompt_placeholder)
+
+# Native persistent file upload attached directly inside the chat input component
+prompt_input = st.chat_input(
+    prompt_placeholder,
+    accept_file="multiple",
+    file_type=["png", "jpg", "jpeg", "webp", "gif", "txt", "md", "py", "js", "ts", "json", "csv", "pdf", "docx"]
+)
 
 if prompt_input:
+    # Extract query text and uploaded files from ChatInputValue or str
+    if isinstance(prompt_input, str):
+        user_query_text = prompt_input
+        attached_files = []
+    else:
+        user_query_text = getattr(prompt_input, "text", "") or prompt_input.get("text", "")
+        attached_files = getattr(prompt_input, "files", []) or prompt_input.get("files", [])
+
     if prefill_prompt:
-        actual_query = prefill_prompt + prompt_input
+        actual_query = prefill_prompt + user_query_text
         st.session_state.active_starter_prompt = ""
     else:
-        actual_query = prompt_input
+        actual_query = user_query_text
         
     current_key = get_current_api_key()
     if not current_key:
         st.error("Please enter your Anthropic API Key in the sidebar before sending a message.")
         st.stop()
+
+    # Process uploaded/attached files and images
+    processed_files_list = []
+    if attached_files:
+        for f in attached_files:
+            p = process_raw_file(f.name, f.read())
+            if p:
+                processed_files_list.append(p)
 
     # Retrieve live web context if enabled or URLs present
     web_context_str, web_sources = "", []
@@ -537,7 +535,6 @@ if prompt_input:
             if full_text.strip():
                 response_placeholder.markdown(full_text)
             elif full_thinking.strip():
-                # If model spent all tokens in reasoning without writing text, present reasoning clearly
                 response_placeholder.markdown(f"*Claude completed its deep reasoning steps (see thinking process above).*")
             
             # Save assistant response with exact tokens & cost to DB
@@ -554,7 +551,7 @@ if prompt_input:
             
             # Auto-title conversation on first turn
             if len(history_messages) <= 2:
-                auto_title = prompt_input[:30] + ("..." if len(prompt_input) > 30 else "")
+                auto_title = actual_query[:30] + ("..." if len(actual_query) > 30 else "")
                 db.update_session_title(st.session_state.current_session_id, auto_title)
                 
             # Render any extracted artifacts

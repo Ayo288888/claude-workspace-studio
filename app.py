@@ -393,7 +393,14 @@ for msg in messages:
 curr_model_display = st.session_state.selected_model_name.split("(")[0].strip()
 prompt_placeholder = "Ask anything, @ to mention, / for actions" if not has_messages else "Reply to Claude..."
 
-with st.bottom():
+# Support both object and callable st.bottom across Streamlit versions
+bottom_container = getattr(st, "bottom", None)
+if bottom_container is not None:
+    bottom_ctx = bottom_container() if callable(bottom_container) else bottom_container
+else:
+    bottom_ctx = st.container()
+
+with bottom_ctx:
     # Sticky Model & Effort Selector Trigger
     col_model_btn, col_spacer = st.columns([0.45, 0.55])
     with col_model_btn:

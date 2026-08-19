@@ -95,7 +95,7 @@ if not current_session:
     st.session_state.current_session_id = new_id
     current_session = db.get_session(new_id)
 
-# Restore session-locked model and effort configuration to ensure prompt caching integrity
+# Restore session-locked model and effort configuration to ensure persistence
 if current_session:
     if current_session.get("model"):
         st.session_state.selected_model_name = current_session["model"]
@@ -120,7 +120,7 @@ if current_key and not st.session_state.live_models_cache:
     except Exception:
         pass
 
-# Build Model Choices
+# Build Model Choices dynamically from MODEL_CONFIG map and live API models
 model_choices = {}
 if st.session_state.live_models_cache:
     for lm in st.session_state.live_models_cache:
@@ -414,10 +414,10 @@ else:
     bottom_ctx = st.container()
 
 with bottom_ctx:
-    # Sticky Model & Effort Selector Trigger
-    col_model_btn, col_spacer = st.columns([0.45, 0.55])
+    # Sticky Model & Effort Selector Trigger - Lives exclusively inside chat input area
+    col_model_btn, col_spacer = st.columns([0.48, 0.52])
     with col_model_btn:
-        with st.popover(f"{curr_model_display} {st.session_state.selected_effort} ⌃ ⌄", help="Configure Model & Reasoning Effort"):
+        with st.popover(f"{curr_model_display} • {st.session_state.selected_effort} ⌄", help="Select Model & Reasoning Effort"):
             st.markdown("<div style='font-size: 0.8rem; font-weight: 700; color: #8E8A80; text-transform: uppercase;'>Model Selection</div>", unsafe_allow_html=True)
             
             # Find default index
@@ -451,8 +451,16 @@ with bottom_ctx:
                 label_visibility="collapsed",
                 key="bottom_effort_slider"
             )
+
+            # Warning if model is switched mid-conversation
+            initial_session_model = current_session.get("model", "") if current_session else ""
+            if has_messages and initial_session_model and selected_model_name != initial_session_model:
+                st.warning(
+                    "Switching models mid-conversation preserves chat history, but prompt caching will restart for the new model prefix on your next message.",
+                    icon="⚠️"
+                )
             
-            # Update session settings in DB to lock parameters
+            # Update session settings in DB to persist selected model and effort across reloads
             if selected_model_name != st.session_state.selected_model_name or selected_effort != st.session_state.selected_effort:
                 st.session_state.selected_model_name = selected_model_name
                 st.session_state.selected_effort = selected_effort

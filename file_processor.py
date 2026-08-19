@@ -1,5 +1,6 @@
 import base64
 import io
+import json
 import os
 from typing import Any, Dict, List, Optional, Union
 import pdfplumber
@@ -17,13 +18,19 @@ def get_mime_type(filename: str) -> str:
         ".txt": "text/plain",
         ".md": "text/markdown",
         ".py": "text/x-python",
+        ".ipynb": "application/x-ipynb+json",
         ".json": "application/json",
         ".js": "text/javascript",
         ".ts": "text/typescript",
+        ".tsx": "text/typescript",
+        ".jsx": "text/javascript",
         ".html": "text/html",
         ".css": "text/css",
         ".sql": "text/plain",
         ".csv": "text/csv",
+        ".yaml": "text/yaml",
+        ".yml": "text/yaml",
+        ".sh": "text/x-sh",
         ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     }
     return mimes.get(ext, "application/octet-stream")
@@ -41,6 +48,30 @@ def process_raw_file(filename: str, file_bytes: bytes) -> Dict[str, Any]:
             "media_type": mime,
             "base64": b64,
             "content": f"[Image: {filename}]"
+        }
+
+    # Handle Jupyter Notebooks (.ipynb)
+    if ext == ".ipynb":
+        try:
+            nb_data = json.loads(file_bytes.decode("utf-8", errors="replace"))
+            cells = nb_data.get("cells", [])
+            nb_parts = []
+            for idx, cell in enumerate(cells):
+                cell_type = cell.get("cell_type", "code")
+                src = "".join(cell.get("source", []))
+                if cell_type == "markdown":
+                    nb_parts.append(f"[Notebook Markdown Cell {idx+1}]\n{src}")
+                elif cell_type == "code":
+                    nb_parts.append(f"[Notebook Code Cell {idx+1}]\n```python\n{src}\n```")
+            content = "\n\n".join(nb_parts) if nb_parts else "[Empty Jupyter Notebook]"
+        except Exception:
+            content = file_bytes.decode("utf-8", errors="replace")
+            
+        return {
+            "type": "text",
+            "name": filename,
+            "media_type": mime,
+            "content": content
         }
 
     # Handle PDF Documents
@@ -78,7 +109,7 @@ def process_raw_file(filename: str, file_bytes: bytes) -> Dict[str, Any]:
             "content": content
         }
 
-    # Handle Text / Code / CSV / JSON / Markdown
+    # Handle Code / Data / Text / All Other Files
     try:
         text = file_bytes.decode("utf-8")
     except UnicodeDecodeError:
@@ -124,7 +155,7 @@ def build_anthropic_message_content(
 ) -> Union[str, List[Dict[str, Any]]]:
     """
     Constructs the exact Claude Messages API content payload,
-    seamlessly supporting Multimodal Vision (pasted/uploaded images) + Text files.
+    seamlessly supporting Multimodal Vision (pasted/uploaded images) + Notebooks + Code + Text files.
     """
     has_images = any(f.get("type") == "image" for f in processed_files)
     
@@ -138,32 +169,37 @@ def build_anthropic_message_content(
         return full
 
     # Multimodal Vision Content Blocks
-    blocks: List[Dict[str, Any]] = []
+    content_blocks = []
     
-    # 1. Attach image blocks
+    # 1. Attach Images as Native Base64 Vision Blocks
     for f in processed_files:
         if f.get("type") == "image" and f.get("base64"):
-            blocks.append({
+            media_type = f.get("media_type", "image/png")
+            if media_type not in ["image/jpeg", "image/png", "image/gif", "image/webp"]:
+                media_type = "image/png"
+            content_blocks.append({
                 "type": "image",
                 "source": {
                     "type": "base64",
-                    "media_type": f.get("media_type", "image/png"),
-                    "data": f.get("base64")
+                    "media_type": media_type,
+                    "data": f["base64"]
                 }
             })
-        elif f.get("type") == "text":
-            blocks.append({
-                "type": "text",
-                "text": f"--- Attached File: {f.get('name')} ---\n{f.get('content')}"
-            })
 
-    # 2. Main text query + web context
-    user_query = prompt_text
-    if web_context:
-        user_query += f"\n\n{web_context}"
-    blocks.append({
-        "type": "text",
-        "text": user_query
-    })
+    # 2. Attach Non-Image Context as Text
+    non_images = [f for f in processed_files if f.get("type") != "image"]
+    text_context = format_file_for_prompt(non_images) if non_images else ""
     
-    return blocks
+    full_text_part = prompt_text
+    if text_context:
+        full_text_part = full_text_part + "\n\n" + text_context
+    if web_context:
+        full_text_part = full_text_part + "\n\n" + web_context
+
+    if full_text_part:
+        content_blocks.append({
+            "type": "text",
+            "text": full_text_part
+        })
+
+    return content_blocks

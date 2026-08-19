@@ -1,3 +1,4 @@
+import json
 import unittest
 from file_processor import process_raw_file, format_file_for_prompt, build_anthropic_message_content
 
@@ -8,6 +9,20 @@ class TestClaudeFileProcessor(unittest.TestCase):
         self.assertEqual(res["type"], "text")
         self.assertIn("def add", res["content"])
         self.assertEqual(res["name"], "calc.py")
+
+    def test_process_jupyter_notebook(self):
+        nb_json = {
+            "cells": [
+                {"cell_type": "markdown", "source": ["# Analysis\n", "Intro text"]},
+                {"cell_type": "code", "source": ["import numpy as np\n", "np.mean([1, 2, 3])"]}
+            ]
+        }
+        nb_bytes = json.dumps(nb_json).encode("utf-8")
+        res = process_raw_file("experiment.ipynb", nb_bytes)
+        self.assertEqual(res["type"], "text")
+        self.assertIn("Notebook Markdown Cell 1", res["content"])
+        self.assertIn("Notebook Code Cell 2", res["content"])
+        self.assertIn("import numpy as np", res["content"])
 
     def test_format_file_for_prompt_single_and_list(self):
         file_info = {"type": "text", "name": "sample.md", "content": "# Overview\nSome plan"}

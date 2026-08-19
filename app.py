@@ -322,6 +322,34 @@ if not has_messages:
     </div>
     """, unsafe_allow_html=True)
 
+# Quick Starter Pill Tags beneath the greeting on New Chat
+prefill_prompt = st.session_state.active_starter_prompt
+if not has_messages:
+    pill1, pill2, pill3, pill4, pill5 = st.columns(5)
+    with pill1:
+        if st.button("Write", key="pill_write", use_container_width=True):
+            st.session_state.active_starter_prompt = "Help me write and refine: "
+            st.rerun()
+    with pill2:
+        if st.button("Learn", key="pill_learn", use_container_width=True):
+            st.session_state.active_starter_prompt = "Explain in depth with examples: "
+            st.rerun()
+    with pill3:
+        if st.button("Code", key="pill_code", use_container_width=True):
+            st.session_state.active_starter_prompt = "Design and implement clean, production-grade code for: "
+            st.rerun()
+    with pill4:
+        if st.button("Analyze", key="pill_data", use_container_width=True):
+            st.session_state.active_starter_prompt = "Analyze the following data or text and extract structured insights: "
+            st.rerun()
+    with pill5:
+        if st.button("Claude's choice", key="pill_choice", use_container_width=True):
+            st.session_state.active_starter_prompt = "Surprise me with an insightful synthesis on modern AI architecture: "
+            st.rerun()
+
+if prefill_prompt and not has_messages:
+    st.info(f"Starter Prompt: *{prefill_prompt}* (Type your details below to send)")
+
 # CHAT MESSAGE HISTORY
 for msg in messages:
     with st.chat_message(msg["role"]):
@@ -359,81 +387,49 @@ for msg in messages:
                 st.markdown(f"<div class='cost-token-badge'>{cost_badge_str}</div>", unsafe_allow_html=True)
 
 # =========================================================================
-# MODEL CONFIGURATION & STARTER PILLS
+# PERSISTENT STICKY BOTTOM BAR (MODEL & EFFORT + CHAT INPUT + ATTACH)
 # =========================================================================
 
-# Short model name for compact button display
 curr_model_display = st.session_state.selected_model_name.split("(")[0].strip()
-
-col_model_btn, col_empty = st.columns([0.48, 0.52])
-with col_model_btn:
-    with st.popover(f"{curr_model_display} {st.session_state.selected_effort} ⌃ ⌄", help="Configure Model & Reasoning Effort"):
-        st.markdown("<div style='font-size: 0.8rem; font-weight: 700; color: #8E8A80; text-transform: uppercase;'>Model Selection</div>", unsafe_allow_html=True)
-        selected_model_label = st.selectbox(
-            "Model",
-            options=list(model_choices.keys()),
-            index=0,
-            label_visibility="collapsed",
-            key="popover_model_select"
-        )
-        if selected_model_label == "Custom Model ID...":
-            custom_id_input = st.text_input("Model ID", placeholder="e.g. claude-opus-4-6", key="popover_custom_id")
-            selected_model_id = custom_id_input.strip() if custom_id_input else "claude-3-7-sonnet-20250219"
-            selected_model_name = f"Custom ({selected_model_id})"
-        else:
-            selected_model_id = model_choices[selected_model_label]
-            selected_model_name = selected_model_label
-        st.session_state.selected_model_name = selected_model_name
-
-        st.markdown("<div style='font-size: 0.8rem; font-weight: 700; color: #8E8A80; text-transform: uppercase; margin-top: 10px;'>Reasoning Effort</div>", unsafe_allow_html=True)
-        selected_effort = st.select_slider(
-            "Effort",
-            options=list(EFFORT_LEVELS.keys()),
-            value=st.session_state.selected_effort if st.session_state.selected_effort in EFFORT_LEVELS else "Medium",
-            label_visibility="collapsed",
-            key="popover_effort_slider"
-        )
-        st.session_state.selected_effort = selected_effort
-
-# Quick Starter Pill Tags beneath the chatbox on New Chat
-prefill_prompt = st.session_state.active_starter_prompt
-if not has_messages:
-    pill1, pill2, pill3, pill4, pill5 = st.columns(5)
-    with pill1:
-        if st.button("Write", key="pill_write", use_container_width=True):
-            st.session_state.active_starter_prompt = "Help me write and refine: "
-            st.rerun()
-    with pill2:
-        if st.button("Learn", key="pill_learn", use_container_width=True):
-            st.session_state.active_starter_prompt = "Explain in depth with examples: "
-            st.rerun()
-    with pill3:
-        if st.button("Code", key="pill_code", use_container_width=True):
-            st.session_state.active_starter_prompt = "Design and implement clean, production-grade code for: "
-            st.rerun()
-    with pill4:
-        if st.button("Analyze", key="pill_data", use_container_width=True):
-            st.session_state.active_starter_prompt = "Analyze the following data or text and extract structured insights: "
-            st.rerun()
-    with pill5:
-        if st.button("Claude's choice", key="pill_choice", use_container_width=True):
-            st.session_state.active_starter_prompt = "Surprise me with an insightful synthesis on modern AI architecture: "
-            st.rerun()
-
-if prefill_prompt and not has_messages:
-    st.info(f"Starter Prompt: *{prefill_prompt}* (Type your details below to send)")
-
-# =========================================================================
-# PERSISTENT STICKY CHAT INPUT WITH INLINE ATTACH/PAPERCLIP BUTTON
-# =========================================================================
 prompt_placeholder = "Ask anything, @ to mention, / for actions" if not has_messages else "Reply to Claude..."
 
-# Native persistent file upload attached directly inside the chat input component
-prompt_input = st.chat_input(
-    prompt_placeholder,
-    accept_file="multiple",
-    file_type=["png", "jpg", "jpeg", "webp", "gif", "txt", "md", "py", "js", "ts", "json", "csv", "pdf", "docx"]
-)
+with st.bottom():
+    # Sticky Model & Effort Selector Trigger
+    col_model_btn, col_spacer = st.columns([0.45, 0.55])
+    with col_model_btn:
+        with st.popover(f"{curr_model_display} {st.session_state.selected_effort} ⌃ ⌄", help="Configure Model & Reasoning Effort"):
+            st.markdown("<div style='font-size: 0.8rem; font-weight: 700; color: #8E8A80; text-transform: uppercase;'>Model Selection</div>", unsafe_allow_html=True)
+            selected_model_label = st.selectbox(
+                "Model",
+                options=list(model_choices.keys()),
+                index=0,
+                label_visibility="collapsed",
+                key="bottom_model_select"
+            )
+            if selected_model_label == "Custom Model ID...":
+                custom_id_input = st.text_input("Model ID", placeholder="e.g. claude-opus-4-6", key="bottom_custom_id")
+                selected_model_id = custom_id_input.strip() if custom_id_input else "claude-3-7-sonnet-20250219"
+                selected_model_name = f"Custom ({selected_model_id})"
+            else:
+                selected_model_id = model_choices[selected_model_label]
+                selected_model_name = selected_model_label
+            st.session_state.selected_model_name = selected_model_name
+
+            st.markdown("<div style='font-size: 0.8rem; font-weight: 700; color: #8E8A80; text-transform: uppercase; margin-top: 10px;'>Reasoning Effort</div>", unsafe_allow_html=True)
+            selected_effort = st.select_slider(
+                "Effort",
+                options=list(EFFORT_LEVELS.keys()),
+                value=st.session_state.selected_effort if st.session_state.selected_effort in EFFORT_LEVELS else "Medium",
+                label_visibility="collapsed",
+                key="bottom_effort_slider"
+            )
+            st.session_state.selected_effort = selected_effort
+
+    # Native persistent file upload attached directly inside chat input (accepts all file types: images, notebooks, code, etc.)
+    prompt_input = st.chat_input(
+        prompt_placeholder,
+        accept_file="multiple"
+    )
 
 if prompt_input:
     # Extract query text and uploaded files from ChatInputValue or str
@@ -455,7 +451,7 @@ if prompt_input:
         st.error("Please enter your Anthropic API Key in the sidebar before sending a message.")
         st.stop()
 
-    # Process uploaded/attached files and images
+    # Process all uploaded/attached files (notebooks, code, images, docs, data)
     processed_files_list = []
     if attached_files:
         for f in attached_files:

@@ -137,15 +137,15 @@ def apply_claude_styles():
             border-color: var(--claude-coral-hover) !important;
         }
 
-        /* Popover Trigger Buttons (Exact Replica of Screenshot) */
+        /* Popover Trigger Buttons */
         div[data-testid="stPopover"] > button {
             background-color: var(--claude-btn-bg) !important;
             border: 1px solid var(--claude-btn-border) !important;
             border-radius: 8px !important;
             color: var(--claude-text) !important;
-            font-size: 0.84rem !important;
+            font-size: 0.82rem !important;
             font-weight: 500 !important;
-            padding: 0.4rem 0.85rem !important;
+            padding: 0.32rem 0.75rem !important;
             box-shadow: none !important;
             display: inline-flex !important;
             align-items: center !important;
@@ -272,19 +272,11 @@ def apply_claude_styles():
             color: var(--claude-muted);
         }
 
-        /* Attached File Thumbnail / Chip */
-        .attached-chip {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            background-color: var(--claude-btn-bg);
-            border: 1px solid var(--claude-btn-border);
-            border-radius: 8px;
-            padding: 4px 10px;
-            font-size: 0.78rem;
-            color: var(--claude-text);
-            margin-right: 6px;
-            margin-bottom: 6px;
+        /* Persistent Sticky Bottom Container */
+        div[data-testid="stBottom"] {
+            background-color: var(--claude-bg) !important;
+            padding-top: 6px !important;
+            padding-bottom: 8px !important;
         }
 
         /* Streamlit Bottom Chat Input Integration */
